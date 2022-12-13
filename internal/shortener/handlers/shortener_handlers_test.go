@@ -101,6 +101,18 @@ func TestShortURLHandler(t *testing.T) {
 				locationHeader: "https://ya.ru",
 			},
 		},
+		{
+			name:        "Url link should not be found with wrong id",
+			requestURL:  "/randomid",
+			requestType: http.MethodGet,
+			requestBody: "https://ya.ru",
+			repo:        repositories.UrlsRepository{"qwerty": "https://ya.ru"},
+			backRepo:    make(repositories.UrlsRepository),
+			wantedResult: wanted{
+				code:          http.StatusNotFound,
+				exactResponse: config.NoURLFoundByID,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
