@@ -13,16 +13,16 @@ func ShortenerHandler(repo repositories.UrlsRepository, backRepo repositories.Ur
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch method := r.Method; method {
 		case http.MethodPost:
-			CreateShortUrlHandler(repo, backRepo, w, r)
+			CreateShortURLHandler(repo, backRepo, w, r)
 		case http.MethodGet:
-			RetrieveShortUrlHandler(repo, w, r)
+			RetrieveShortURLHandler(repo, w, r)
 		default:
 			http.Error(w, config.OnlyGetPostRequestAllowedError, http.StatusBadRequest)
 		}
 	}
 }
 
-func CreateShortUrlHandler(
+func CreateShortURLHandler(
 	repo repositories.UrlsRepository,
 	backRepo repositories.UrlsRepository,
 	w http.ResponseWriter,
@@ -30,6 +30,10 @@ func CreateShortUrlHandler(
 ) {
 	defer r.Body.Close()
 	urlToEncode, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, config.UnknownError, http.StatusBadRequest)
+		return
+	}
 	if string(urlToEncode) == "" {
 		http.Error(w, config.RequestBodyEmptyError, http.StatusBadRequest)
 		return
@@ -37,29 +41,29 @@ func CreateShortUrlHandler(
 	w.WriteHeader(http.StatusCreated)
 
 	if link, exist := backRepo[string(urlToEncode)]; exist {
-		_, err = w.Write([]byte(config.BaseUrl + link))
+		w.Write([]byte(config.BaseURL + link))
 		return
 	}
 
-	shortUrl := shortuuid.New()
-	repo[shortUrl] = string(urlToEncode)
-	backRepo[string(urlToEncode)] = shortUrl
+	shortURL := shortuuid.New()
+	repo[shortURL] = string(urlToEncode)
+	backRepo[string(urlToEncode)] = shortURL
 
-	_, err = w.Write([]byte(config.BaseUrl + shortUrl))
+	_, err = w.Write([]byte(config.BaseURL + shortURL))
 	if err != nil {
 		http.Error(w, config.UnknownError, http.StatusInternalServerError)
 		return
 	}
 }
 
-func RetrieveShortUrlHandler(
+func RetrieveShortURLHandler(
 	repo repositories.UrlsRepository,
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
 	query := strings.Trim(r.URL.Path, "/")
 	if query == "" {
-		http.Error(w, config.NoIdWasFoundInUrl, http.StatusBadRequest)
+		http.Error(w, config.NoIDWasFoundInURL, http.StatusBadRequest)
 		return
 	}
 
@@ -68,5 +72,5 @@ func RetrieveShortUrlHandler(
 		w.WriteHeader(http.StatusTemporaryRedirect)
 		return
 	}
-	http.Error(w, config.NoUrlFoundById, http.StatusNotFound)
+	http.Error(w, config.NoURLFoundByID, http.StatusNotFound)
 }
