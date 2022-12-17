@@ -4,7 +4,7 @@ import "github.com/lithammer/shortuuid"
 
 type UrlsRepository map[string]string
 
-func (repo UrlsRepository) GetById(id string) (string, bool) {
+func (repo UrlsRepository) GetByID(id string) (string, bool) {
 	result, exist := repo[id]
 	return result, exist
 }

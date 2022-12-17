@@ -50,7 +50,7 @@ func (h *ShortenerHandler) CreateShortURLHandler(
 	}
 	w.WriteHeader(http.StatusCreated)
 
-	if link, exist := h.BackRepo.GetById(string(urlToEncode)); exist {
+	if link, exist := h.BackRepo.GetByID(string(urlToEncode)); exist {
 		w.Write([]byte(config.BaseURL + link))
 		return
 	}
@@ -70,8 +70,8 @@ func (h *ShortenerHandler) RetrieveShortURLHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	urlId := chi.URLParam(r, "id")
-	if link, exist := h.Repo.GetById(urlId); exist {
+	urlID := chi.URLParam(r, "id")
+	if link, exist := h.Repo.GetByID(urlID); exist {
 		w.Header().Set("Location", link)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 		return
