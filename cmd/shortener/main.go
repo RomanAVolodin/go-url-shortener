@@ -12,6 +12,6 @@ func main() {
 	repo := make(repositories.UrlsRepository)
 	backwardRepo := make(repositories.UrlsRepository)
 
-	http.HandleFunc("/", handlers.ShortenerHandler(repo, backwardRepo))
-	log.Fatal(http.ListenAndServe(config.AppPort, nil))
+	h := handlers.NewShortenerHandler(repo, backwardRepo)
+	log.Fatal(http.ListenAndServe(config.AppPort, h))
 }

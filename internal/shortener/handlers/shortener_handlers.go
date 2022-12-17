@@ -3,28 +3,38 @@ package handlers
 import (
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
-	"github.com/lithammer/shortuuid"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"io"
 	"net/http"
-	"strings"
 )
 
-func ShortenerHandler(repo repositories.UrlsRepository, backRepo repositories.UrlsRepository) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		switch method := r.Method; method {
-		case http.MethodPost:
-			CreateShortURLHandler(repo, backRepo, w, r)
-		case http.MethodGet:
-			RetrieveShortURLHandler(repo, w, r)
-		default:
-			http.Error(w, config.OnlyGetPostRequestAllowedError, http.StatusBadRequest)
-		}
-	}
+type ShortenerHandler struct {
+	*chi.Mux
+	Repo     repositories.UrlsRepository
+	BackRepo repositories.UrlsRepository
 }
 
-func CreateShortURLHandler(
-	repo repositories.UrlsRepository,
-	backRepo repositories.UrlsRepository,
+func NewShortenerHandler(repo repositories.UrlsRepository, backRepo repositories.UrlsRepository) *ShortenerHandler {
+	h := &ShortenerHandler{
+		Mux:      chi.NewMux(),
+		Repo:     repo,
+		BackRepo: backRepo,
+	}
+	h.Use(middleware.RequestID)
+	h.Use(middleware.RealIP)
+	h.Use(middleware.Logger)
+	h.Use(middleware.Recoverer)
+
+	h.Get("/{id}", h.RetrieveShortURLHandler)
+	h.Post("/", h.CreateShortURLHandler)
+	h.MethodNotAllowed(func(writer http.ResponseWriter, request *http.Request) {
+		http.Error(writer, config.OnlyGetPostRequestAllowedError, http.StatusMethodNotAllowed)
+	})
+	return h
+}
+
+func (h *ShortenerHandler) CreateShortURLHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
@@ -40,34 +50,28 @@ func CreateShortURLHandler(
 	}
 	w.WriteHeader(http.StatusCreated)
 
-	if link, exist := backRepo[string(urlToEncode)]; exist {
+	if link, exist := h.BackRepo.GetById(string(urlToEncode)); exist {
 		w.Write([]byte(config.BaseURL + link))
 		return
 	}
 
-	shortURL := shortuuid.New()
-	repo[shortURL] = string(urlToEncode)
-	backRepo[string(urlToEncode)] = shortURL
+	// TODO: wrap into one transaction
+	id := h.Repo.Create(string(urlToEncode))
+	h.BackRepo.CreateBackwardRecord(string(urlToEncode), id)
 
-	_, err = w.Write([]byte(config.BaseURL + shortURL))
+	_, err = w.Write([]byte(config.BaseURL + id))
 	if err != nil {
 		http.Error(w, config.UnknownError, http.StatusInternalServerError)
 		return
 	}
 }
 
-func RetrieveShortURLHandler(
-	repo repositories.UrlsRepository,
+func (h *ShortenerHandler) RetrieveShortURLHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	query := strings.Trim(r.URL.Path, "/")
-	if query == "" {
-		http.Error(w, config.NoIDWasFoundInURL, http.StatusBadRequest)
-		return
-	}
-
-	if link, exist := repo[query]; exist {
+	urlId := chi.URLParam(r, "id")
+	if link, exist := h.Repo.GetById(urlId); exist {
 		w.Header().Set("Location", link)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 		return

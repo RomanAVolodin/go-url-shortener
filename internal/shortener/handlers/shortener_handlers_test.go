@@ -31,7 +31,7 @@ func TestShortURLHandler(t *testing.T) {
 			name:        "Delete request should fail",
 			requestType: http.MethodDelete,
 			wantedResult: wanted{
-				code:          http.StatusBadRequest,
+				code:          http.StatusMethodNotAllowed,
 				exactResponse: config.OnlyGetPostRequestAllowedError,
 			},
 		},
@@ -39,7 +39,7 @@ func TestShortURLHandler(t *testing.T) {
 			name:        "Put request should fail",
 			requestType: http.MethodPut,
 			wantedResult: wanted{
-				code:          http.StatusBadRequest,
+				code:          http.StatusMethodNotAllowed,
 				exactResponse: config.OnlyGetPostRequestAllowedError,
 			},
 		},
@@ -47,7 +47,7 @@ func TestShortURLHandler(t *testing.T) {
 			name:        "Patch request should fail",
 			requestType: http.MethodPatch,
 			wantedResult: wanted{
-				code:          http.StatusBadRequest,
+				code:          http.StatusMethodNotAllowed,
 				exactResponse: config.OnlyGetPostRequestAllowedError,
 			},
 		},
@@ -85,8 +85,8 @@ func TestShortURLHandler(t *testing.T) {
 			name:        "Url link should not be returned without id in query",
 			requestType: http.MethodGet,
 			wantedResult: wanted{
-				code:          http.StatusBadRequest,
-				exactResponse: config.NoIDWasFoundInURL,
+				code:          http.StatusMethodNotAllowed,
+				exactResponse: config.OnlyGetPostRequestAllowedError,
 			},
 		},
 		{
@@ -129,7 +129,7 @@ func TestShortURLHandler(t *testing.T) {
 			request.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
 
 			w := httptest.NewRecorder()
-			h := ShortenerHandler(tt.repo, tt.backRepo)
+			h := NewShortenerHandler(tt.repo, tt.backRepo)
 			h.ServeHTTP(w, request)
 			res := w.Result()
 			defer res.Body.Close()
