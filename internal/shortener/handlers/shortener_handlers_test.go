@@ -23,8 +23,8 @@ func TestShortURLHandler(t *testing.T) {
 		requestURL   string
 		requestType  string
 		requestBody  string
-		repo         repositories.UrlsRepository
-		backRepo     repositories.UrlsRepository
+		repo         repositories.Repository
+		backRepo     repositories.Repository
 		wantedResult wanted
 	}{
 		{

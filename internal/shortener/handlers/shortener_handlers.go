@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
-	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
+	repo "github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"io"
@@ -11,11 +11,11 @@ import (
 
 type ShortenerHandler struct {
 	*chi.Mux
-	Repo     repositories.UrlsRepository
-	BackRepo repositories.UrlsRepository
+	Repo     repo.Repository
+	BackRepo repo.Repository
 }
 
-func NewShortenerHandler(repo repositories.UrlsRepository, backRepo repositories.UrlsRepository) *ShortenerHandler {
+func NewShortenerHandler(repo repo.Repository, backRepo repo.Repository) *ShortenerHandler {
 	h := &ShortenerHandler{
 		Mux:      chi.NewMux(),
 		Repo:     repo,
