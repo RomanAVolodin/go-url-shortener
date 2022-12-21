@@ -38,12 +38,13 @@ func (h *ShortenerHandler) CreateShortURLHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	defer r.Body.Close()
 	urlToEncode, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, config.UnknownError, http.StatusBadRequest)
 		return
 	}
+	defer r.Body.Close()
+
 	if string(urlToEncode) == "" {
 		http.Error(w, config.RequestBodyEmptyError, http.StatusBadRequest)
 		return
