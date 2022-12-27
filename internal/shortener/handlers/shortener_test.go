@@ -52,7 +52,7 @@ func TestShortURLHandler(t *testing.T) {
 			},
 		},
 		{
-			name:        "Url link should not be generated with empty body",
+			name:        "URL link should not be generated with empty body",
 			requestType: http.MethodPost,
 			wantedResult: wanted{
 				code:          http.StatusBadRequest,
@@ -60,7 +60,7 @@ func TestShortURLHandler(t *testing.T) {
 			},
 		},
 		{
-			name:        "Url link should be generated",
+			name:        "URL link should be generated",
 			requestType: http.MethodPost,
 			requestBody: "https://ya.ru",
 			repo:        make(repositories.UrlsRepository),
@@ -71,7 +71,7 @@ func TestShortURLHandler(t *testing.T) {
 			},
 		},
 		{
-			name:        "Url link should be returned while creating if already generated",
+			name:        "URL link should be returned while creating if already generated",
 			requestType: http.MethodPost,
 			requestBody: "https://ya.ru",
 			repo:        make(repositories.UrlsRepository),
@@ -82,7 +82,7 @@ func TestShortURLHandler(t *testing.T) {
 			},
 		},
 		{
-			name:        "Url link should not be returned without id in query",
+			name:        "URL link should not be returned without id in query",
 			requestType: http.MethodGet,
 			wantedResult: wanted{
 				code:          http.StatusMethodNotAllowed,
@@ -90,7 +90,7 @@ func TestShortURLHandler(t *testing.T) {
 			},
 		},
 		{
-			name:        "Url link should be returned",
+			name:        "URL link should be returned",
 			requestURL:  "/qwerty",
 			requestType: http.MethodGet,
 			requestBody: "https://ya.ru",
@@ -102,7 +102,7 @@ func TestShortURLHandler(t *testing.T) {
 			},
 		},
 		{
-			name:        "Url link should not be found with wrong id",
+			name:        "URL link should not be found with wrong id",
 			requestURL:  "/randomid",
 			requestType: http.MethodGet,
 			requestBody: "https://ya.ru",
@@ -114,7 +114,7 @@ func TestShortURLHandler(t *testing.T) {
 			},
 		},
 		{
-			name:        "JSON handler Url link should not be generated with empty body",
+			name:        "JSON handler URL link should not be generated with empty body",
 			requestURL:  "/api/shorten",
 			requestType: http.MethodPost,
 			wantedResult: wanted{
@@ -123,7 +123,7 @@ func TestShortURLHandler(t *testing.T) {
 			},
 		},
 		{
-			name:        "JSON Url link should be generated",
+			name:        "JSON URL link should be generated",
 			requestType: http.MethodPost,
 			requestURL:  "/api/shorten",
 			requestBody: "{\"url\": \"https://mail.ru\"}",
@@ -158,7 +158,7 @@ func TestShortURLHandler(t *testing.T) {
 			},
 		},
 		{
-			name:        "JSON Url link should be returned while creating if already generated",
+			name:        "JSON URL link should be returned while creating if already generated",
 			requestType: http.MethodPost,
 			requestURL:  "/api/shorten",
 			requestBody: "{\"url\": \"https://mail.ru\"}",

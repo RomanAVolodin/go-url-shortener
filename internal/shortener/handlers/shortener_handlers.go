@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
 	"github.com/go-chi/chi/v5"
 	"io"
@@ -9,7 +10,7 @@ import (
 )
 
 type ShortenerCreateDTO struct {
-	Url string `json:"url"`
+	URL string `json:"url"`
 }
 
 type ShortenerResponseDTO struct {
@@ -25,26 +26,27 @@ func (h *ShortenerHandler) CreateJSONShortURLHandler(
 		return
 	}
 	var createDTO ShortenerCreateDTO
-	if err := json.Unmarshal(requestBody, &createDTO); err != nil || createDTO.Url == "" {
+	if err := json.Unmarshal(requestBody, &createDTO); err != nil || createDTO.URL == "" {
 		http.Error(w, config.BadInputData, http.StatusUnprocessableEntity)
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
 
 	var id string
-	if link, exist := h.BackRepo.GetByID(createDTO.Url); exist {
+	if link, exist := h.BackRepo.GetByID(createDTO.URL); exist {
 		id = link
 	} else {
-		id = h.saveToRepositories([]byte(createDTO.Url))
+		id = h.saveToRepositories([]byte(createDTO.URL))
 	}
 
-	responseDTO := ShortenerResponseDTO{Result: config.BaseURL + id}
+	responseDTO := ShortenerResponseDTO{Result: h.generateResultURL(r, id)}
+	fmt.Println(responseDTO)
 	jsonResponse, err := json.Marshal(responseDTO)
 	if err != nil {
 		http.Error(w, config.UnknownError, http.StatusBadRequest)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	w.Write(jsonResponse)
 }
 
@@ -104,4 +106,13 @@ func (h *ShortenerHandler) readBody(w http.ResponseWriter, r *http.Request) (bod
 		return nil, true
 	}
 	return urlToEncode, false
+}
+
+func (h *ShortenerHandler) generateResultURL(r *http.Request, id string) string {
+	switch r.TLS {
+	case nil:
+		return "http://" + r.Host + "/" + id
+	default:
+		return "https://" + r.Host + "/" + id
+	}
 }
