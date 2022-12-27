@@ -113,6 +113,62 @@ func TestShortURLHandler(t *testing.T) {
 				exactResponse: config.NoURLFoundByID,
 			},
 		},
+		{
+			name:        "JSON handler Url link should not be generated with empty body",
+			requestURL:  "/api/shorten",
+			requestType: http.MethodPost,
+			wantedResult: wanted{
+				code:          http.StatusBadRequest,
+				exactResponse: config.RequestBodyEmptyError,
+			},
+		},
+		{
+			name:        "JSON Url link should be generated",
+			requestType: http.MethodPost,
+			requestURL:  "/api/shorten",
+			requestBody: "{\"url\": \"https://mail.ru\"}",
+			repo:        make(repositories.UrlsRepository),
+			backRepo:    make(repositories.UrlsRepository),
+			wantedResult: wanted{
+				code:              http.StatusCreated,
+				responseStartWith: "{\"result\":\"http://",
+			},
+		},
+		{
+			name:        "JSON should return error with empty body",
+			requestType: http.MethodPost,
+			requestURL:  "/api/shorten",
+			repo:        make(repositories.UrlsRepository),
+			backRepo:    make(repositories.UrlsRepository),
+			wantedResult: wanted{
+				code:          http.StatusBadRequest,
+				exactResponse: config.RequestBodyEmptyError,
+			},
+		},
+		{
+			name:        "JSON should return error with wrong body body",
+			requestType: http.MethodPost,
+			requestURL:  "/api/shorten",
+			requestBody: "{\"wrongfield\": \"https://mail.ru\"}",
+			repo:        make(repositories.UrlsRepository),
+			backRepo:    make(repositories.UrlsRepository),
+			wantedResult: wanted{
+				code:          http.StatusUnprocessableEntity,
+				exactResponse: config.BadInputData,
+			},
+		},
+		{
+			name:        "JSON Url link should be returned while creating if already generated",
+			requestType: http.MethodPost,
+			requestURL:  "/api/shorten",
+			requestBody: "{\"url\": \"https://mail.ru\"}",
+			repo:        make(repositories.UrlsRepository),
+			backRepo:    repositories.UrlsRepository{"https://mail.ru": "qwerty"},
+			wantedResult: wanted{
+				code:          http.StatusCreated,
+				exactResponse: "{\"result\":\"http://localhost:8080/qwerty\"}",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
