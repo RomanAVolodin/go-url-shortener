@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
 	"github.com/go-chi/chi/v5"
 	"io"
@@ -39,7 +38,6 @@ func (h *ShortenerHandler) CreateJSONShortURLHandler(
 	}
 
 	responseDTO := ShortenerResponseDTO{Result: h.generateResultURL(r, id)}
-	fmt.Println(responseDTO)
 	jsonResponse, err := json.Marshal(responseDTO)
 	if err != nil {
 		http.Error(w, config.UnknownError, http.StatusBadRequest)

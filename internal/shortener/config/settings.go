@@ -1,8 +1,8 @@
 package config
 
 const (
-	AppPort     string = ":8080"
-	TestBaseURL        = "http://example.com/"
+	AppPort     = ":8080"
+	TestBaseURL = "http://example.com/"
 )
 
 const (
