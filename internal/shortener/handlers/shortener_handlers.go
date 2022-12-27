@@ -61,13 +61,13 @@ func (h *ShortenerHandler) CreateShortURLHandler(
 	w.WriteHeader(http.StatusCreated)
 
 	if link, exist := h.BackRepo.GetByID(string(urlToEncode)); exist {
-		w.Write([]byte(config.BaseURL + link))
+		w.Write([]byte(h.generateResultURL(r, link)))
 		return
 	}
 
 	id := h.saveToRepositories(urlToEncode)
 
-	_, err := w.Write([]byte(config.BaseURL + id))
+	_, err := w.Write([]byte(h.generateResultURL(r, id)))
 	if err != nil {
 		http.Error(w, config.UnknownError, http.StatusInternalServerError)
 		return
