@@ -9,9 +9,11 @@ import (
 )
 
 func main() {
+
 	repo := make(repositories.UrlsRepository)
 	backwardRepo := make(repositories.UrlsRepository)
 
 	h := handlers.NewShortenerHandler(repo, backwardRepo)
-	log.Fatal(http.ListenAndServe(config.AppPort, h))
+	log.Printf("Server started at %s", config.Settings.ServerAddress)
+	log.Fatal(http.ListenAndServe(config.Settings.ServerAddress, h))
 }
