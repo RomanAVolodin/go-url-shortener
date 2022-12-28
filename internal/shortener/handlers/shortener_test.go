@@ -52,7 +52,7 @@ func TestShortURLHandler(t *testing.T) {
 			},
 		},
 		{
-			name:        "Url link should not be generated with empty body",
+			name:        "URL link should not be generated with empty body",
 			requestType: http.MethodPost,
 			wantedResult: wanted{
 				code:          http.StatusBadRequest,
@@ -60,29 +60,29 @@ func TestShortURLHandler(t *testing.T) {
 			},
 		},
 		{
-			name:        "Url link should be generated",
+			name:        "URL link should be generated",
 			requestType: http.MethodPost,
 			requestBody: "https://ya.ru",
 			repo:        make(repositories.UrlsRepository),
 			backRepo:    make(repositories.UrlsRepository),
 			wantedResult: wanted{
 				code:              http.StatusCreated,
-				responseStartWith: config.BaseURL,
+				responseStartWith: config.Settings.BaseURL,
 			},
 		},
 		{
-			name:        "Url link should be returned while creating if already generated",
+			name:        "URL link should be returned while creating if already generated",
 			requestType: http.MethodPost,
 			requestBody: "https://ya.ru",
 			repo:        make(repositories.UrlsRepository),
 			backRepo:    repositories.UrlsRepository{"https://ya.ru": "qwerty"},
 			wantedResult: wanted{
 				code:          http.StatusCreated,
-				exactResponse: config.BaseURL + "qwerty",
+				exactResponse: config.Settings.BaseURL + "/qwerty",
 			},
 		},
 		{
-			name:        "Url link should not be returned without id in query",
+			name:        "URL link should not be returned without id in query",
 			requestType: http.MethodGet,
 			wantedResult: wanted{
 				code:          http.StatusMethodNotAllowed,
@@ -90,7 +90,7 @@ func TestShortURLHandler(t *testing.T) {
 			},
 		},
 		{
-			name:        "Url link should be returned",
+			name:        "URL link should be returned",
 			requestURL:  "/qwerty",
 			requestType: http.MethodGet,
 			requestBody: "https://ya.ru",
@@ -102,7 +102,7 @@ func TestShortURLHandler(t *testing.T) {
 			},
 		},
 		{
-			name:        "Url link should not be found with wrong id",
+			name:        "URL link should not be found with wrong id",
 			requestURL:  "/randomid",
 			requestType: http.MethodGet,
 			requestBody: "https://ya.ru",
@@ -111,6 +111,62 @@ func TestShortURLHandler(t *testing.T) {
 			wantedResult: wanted{
 				code:          http.StatusNotFound,
 				exactResponse: config.NoURLFoundByID,
+			},
+		},
+		{
+			name:        "JSON handler URL link should not be generated with empty body",
+			requestURL:  "/api/shorten",
+			requestType: http.MethodPost,
+			wantedResult: wanted{
+				code:          http.StatusBadRequest,
+				exactResponse: config.RequestBodyEmptyError,
+			},
+		},
+		{
+			name:        "JSON URL link should be generated",
+			requestType: http.MethodPost,
+			requestURL:  "/api/shorten",
+			requestBody: "{\"url\": \"https://mail.ru\"}",
+			repo:        make(repositories.UrlsRepository),
+			backRepo:    make(repositories.UrlsRepository),
+			wantedResult: wanted{
+				code:              http.StatusCreated,
+				responseStartWith: "{\"result\":\"http://",
+			},
+		},
+		{
+			name:        "JSON should return error with empty body",
+			requestType: http.MethodPost,
+			requestURL:  "/api/shorten",
+			repo:        make(repositories.UrlsRepository),
+			backRepo:    make(repositories.UrlsRepository),
+			wantedResult: wanted{
+				code:          http.StatusBadRequest,
+				exactResponse: config.RequestBodyEmptyError,
+			},
+		},
+		{
+			name:        "JSON should return error with wrong body body",
+			requestType: http.MethodPost,
+			requestURL:  "/api/shorten",
+			requestBody: "{\"wrongfield\": \"https://mail.ru\"}",
+			repo:        make(repositories.UrlsRepository),
+			backRepo:    make(repositories.UrlsRepository),
+			wantedResult: wanted{
+				code:          http.StatusUnprocessableEntity,
+				exactResponse: config.BadInputData,
+			},
+		},
+		{
+			name:        "JSON URL link should be returned while creating if already generated",
+			requestType: http.MethodPost,
+			requestURL:  "/api/shorten",
+			requestBody: "{\"url\": \"https://mail.ru\"}",
+			repo:        make(repositories.UrlsRepository),
+			backRepo:    repositories.UrlsRepository{"https://mail.ru": "qwerty"},
+			wantedResult: wanted{
+				code:          http.StatusCreated,
+				exactResponse: "{\"result\":\"" + config.Settings.BaseURL + "/qwerty\"}",
 			},
 		},
 	}
