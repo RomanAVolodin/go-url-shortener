@@ -1,8 +1,8 @@
 package config
 
-const (
-	AppPort     = ":8080"
-	TestBaseURL = "http://example.com/"
+import (
+	"github.com/caarlos0/env/v6"
+	"log"
 )
 
 const (
@@ -12,3 +12,17 @@ const (
 	UnknownError                   = "Something bad's happened"
 	NoURLFoundByID                 = "No url found by id"
 )
+
+type AppSettings struct {
+	ServerAddress string `env:"SERVER_ADDRESS" envDefault:"localhost:8080"`
+	BaseURL       string `env:"BASE_URL" envDefault:"http://localhost:8080"`
+}
+
+var Settings AppSettings
+
+func init() {
+	err := env.Parse(&Settings)
+	if err != nil {
+		log.Fatal(err)
+	}
+}

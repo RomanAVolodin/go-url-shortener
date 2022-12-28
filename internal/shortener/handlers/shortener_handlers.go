@@ -107,10 +107,11 @@ func (h *ShortenerHandler) readBody(w http.ResponseWriter, r *http.Request) (bod
 }
 
 func (h *ShortenerHandler) generateResultURL(r *http.Request, id string) string {
-	switch r.TLS {
-	case nil:
-		return "http://" + r.Host + "/" + id
-	default:
-		return "https://" + r.Host + "/" + id
-	}
+	//switch r.TLS {
+	//case nil:
+	//	return "http://" + r.Host + "/" + id
+	//default:
+	//	return "https://" + r.Host + "/" + id
+	//}
+	return config.Settings.BaseURL + "/" + id
 }

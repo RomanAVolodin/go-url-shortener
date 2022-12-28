@@ -67,7 +67,7 @@ func TestShortURLHandler(t *testing.T) {
 			backRepo:    make(repositories.UrlsRepository),
 			wantedResult: wanted{
 				code:              http.StatusCreated,
-				responseStartWith: config.TestBaseURL,
+				responseStartWith: config.Settings.BaseURL,
 			},
 		},
 		{
@@ -78,7 +78,7 @@ func TestShortURLHandler(t *testing.T) {
 			backRepo:    repositories.UrlsRepository{"https://ya.ru": "qwerty"},
 			wantedResult: wanted{
 				code:          http.StatusCreated,
-				exactResponse: config.TestBaseURL + "qwerty",
+				exactResponse: config.Settings.BaseURL + "/qwerty",
 			},
 		},
 		{
@@ -166,7 +166,7 @@ func TestShortURLHandler(t *testing.T) {
 			backRepo:    repositories.UrlsRepository{"https://mail.ru": "qwerty"},
 			wantedResult: wanted{
 				code:          http.StatusCreated,
-				exactResponse: "{\"result\":\"" + config.TestBaseURL + "qwerty\"}",
+				exactResponse: "{\"result\":\"" + config.Settings.BaseURL + "/qwerty\"}",
 			},
 		},
 	}
