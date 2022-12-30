@@ -23,7 +23,7 @@ func SetRepositories() (repositories.Repository, repositories.Repository) {
 
 	backwardRepo := repositories.FileRepository{
 		Storage:  make(map[string]string),
-		FilePath: "back_" + config.Settings.FileStoragePath,
+		FilePath: config.Settings.FileStoragePath + "_back",
 	}
 	backwardRepo.Restore()
 
