@@ -57,11 +57,17 @@
 				
 				<option value="file0">github.com/RomanAVolodin/go-url-shortener/cmd/shortener/main.go (0.0%)</option>
 				
-				<option value="file1">github.com/RomanAVolodin/go-url-shortener/internal/shortener/handlers/shortener.go (100.0%)</option>
+				<option value="file1">github.com/RomanAVolodin/go-url-shortener/internal/shortener/config/settings.go (66.7%)</option>
 				
-				<option value="file2">github.com/RomanAVolodin/go-url-shortener/internal/shortener/handlers/shortener_handlers.go (86.5%)</option>
+				<option value="file2">github.com/RomanAVolodin/go-url-shortener/internal/shortener/handlers/shortener.go (100.0%)</option>
 				
-				<option value="file3">github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories/urls_repository.go (100.0%)</option>
+				<option value="file3">github.com/RomanAVolodin/go-url-shortener/internal/shortener/handlers/shortener_handlers.go (88.0%)</option>
+				
+				<option value="file4">github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories/file_repository.go (87.9%)</option>
+				
+				<option value="file5">github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories/in_memory_repository.go (100.0%)</option>
+				
+				<option value="file6">github.com/RomanAVolodin/go-url-shortener/internal/shortener/utils/repository.go (100.0%)</option>
 				
 				</select>
 			</div>
@@ -89,21 +95,51 @@
 import (
         "github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
         "github.com/RomanAVolodin/go-url-shortener/internal/shortener/handlers"
-        "github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
+        "github.com/RomanAVolodin/go-url-shortener/internal/shortener/utils"
         "log"
         "net/http"
 )
 
 func main() <span class="cov0" title="0">{
-        repo := make(repositories.UrlsRepository)
-        backwardRepo := make(repositories.UrlsRepository)
-
-        h := handlers.NewShortenerHandler(repo, backwardRepo)
-        log.Fatal(http.ListenAndServe(config.AppPort, h))
+        repo, backRepo := utils.SetRepositories()
+        h := handlers.NewShortenerHandler(repo, backRepo)
+        log.Printf("Server started at %s", config.Settings.ServerAddress)
+        log.Fatal(http.ListenAndServe(config.Settings.ServerAddress, h))
 }</span>
 </pre>
 		
-		<pre class="file" id="file1" style="display: none">package handlers
+		<pre class="file" id="file1" style="display: none">package config
+
+import (
+        "github.com/caarlos0/env/v6"
+        "log"
+)
+
+const (
+        OnlyGetPostRequestAllowedError = "Only GET/POST requests allowed"
+        RequestBodyEmptyError          = "Request body is empty"
+        BadInputData                   = "Incorrect request body data"
+        UnknownError                   = "Something bad's happened"
+        NoURLFoundByID                 = "No url found by id"
+)
+
+type AppSettings struct {
+        ServerAddress   string `env:"SERVER_ADDRESS" envDefault:"localhost:8080"`
+        BaseURL         string `env:"BASE_URL" envDefault:"http://localhost:8080"`
+        FileStoragePath string `env:"FILE_STORAGE_PATH"`
+}
+
+var Settings AppSettings
+
+func init() <span class="cov10" title="2">{
+        err := env.Parse(&amp;Settings)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal(err)
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package handlers
 
 import (
         "github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
@@ -119,7 +155,7 @@ type ShortenerHandler struct {
         BackRepo repo.Repository
 }
 
-func NewShortenerHandler(repo repo.Repository, backRepo repo.Repository) *ShortenerHandler <span class="cov10" title="14">{
+func NewShortenerHandler(repo repo.Repository, backRepo repo.Repository) *ShortenerHandler <span class="cov10" title="20">{
         h := &amp;ShortenerHandler{
                 Mux:      chi.NewMux(),
                 Repo:     repo,
@@ -136,11 +172,11 @@ func NewShortenerHandler(repo repo.Repository, backRepo repo.Repository) *Shorte
         h.MethodNotAllowed(func(writer http.ResponseWriter, request *http.Request) </span><span class="cov5" title="4">{
                 http.Error(writer, config.OnlyGetPostRequestAllowedError, http.StatusMethodNotAllowed)
         }</span>)
-        <span class="cov10" title="14">return h</span>
+        <span class="cov10" title="20">return h</span>
 }
 </pre>
 		
-		<pre class="file" id="file2" style="display: none">package handlers
+		<pre class="file" id="file3" style="display: none">package handlers
 
 import (
         "encoding/json"
@@ -161,31 +197,31 @@ type ShortenerResponseDTO struct {
 func (h *ShortenerHandler) CreateJSONShortURLHandler(
         w http.ResponseWriter,
         r *http.Request,
-) <span class="cov7" title="5">{
+) <span class="cov8" title="8">{
         requestBody, doneWithError := h.readBody(w, r)
-        if doneWithError </span><span class="cov4" title="2">{
+        if doneWithError </span><span class="cov4" title="3">{
                 return
         }</span>
-        <span class="cov5" title="3">var createDTO ShortenerCreateDTO
-        if err := json.Unmarshal(requestBody, &amp;createDTO); err != nil || createDTO.URL == "" </span><span class="cov1" title="1">{
+        <span class="cov6" title="5">var createDTO ShortenerCreateDTO
+        if err := json.Unmarshal(requestBody, &amp;createDTO); err != nil || createDTO.URL == "" </span><span class="cov3" title="2">{
                 http.Error(w, config.BadInputData, http.StatusUnprocessableEntity)
                 return
         }</span>
 
-        <span class="cov4" title="2">var id string
+        <span class="cov4" title="3">var id string
         if link, exist := h.BackRepo.GetByID(createDTO.URL); exist </span><span class="cov1" title="1">{
                 id = link
-        }</span> else<span class="cov1" title="1"> {
+        }</span> else<span class="cov3" title="2"> {
                 id = h.saveToRepositories([]byte(createDTO.URL))
         }</span>
 
-        <span class="cov4" title="2">responseDTO := ShortenerResponseDTO{Result: h.generateResultURL(r, id)}
+        <span class="cov4" title="3">responseDTO := ShortenerResponseDTO{Result: h.generateResultURL(r, id)}
         jsonResponse, err := json.Marshal(responseDTO)
         if err != nil </span><span class="cov0" title="0">{
                 http.Error(w, config.UnknownError, http.StatusBadRequest)
                 return
         }</span>
-        <span class="cov4" title="2">w.Header().Set("Content-Type", "application/json")
+        <span class="cov4" title="3">w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusCreated)
         w.Write(jsonResponse)</span>
 }
@@ -193,19 +229,19 @@ func (h *ShortenerHandler) CreateJSONShortURLHandler(
 func (h *ShortenerHandler) CreateShortURLHandler(
         w http.ResponseWriter,
         r *http.Request,
-) <span class="cov5" title="3">{
+) <span class="cov6" title="4">{
         urlToEncode, doneWithError := h.readBody(w, r)
         if doneWithError </span><span class="cov1" title="1">{
                 return
         }</span>
-        <span class="cov4" title="2">w.WriteHeader(http.StatusCreated)
+        <span class="cov4" title="3">w.WriteHeader(http.StatusCreated)
 
         if link, exist := h.BackRepo.GetByID(string(urlToEncode)); exist </span><span class="cov1" title="1">{
                 w.Write([]byte(h.generateResultURL(r, link)))
                 return
         }</span>
 
-        <span class="cov1" title="1">id := h.saveToRepositories(urlToEncode)
+        <span class="cov3" title="2">id := h.saveToRepositories(urlToEncode)
 
         _, err := w.Write([]byte(h.generateResultURL(r, id)))
         if err != nil </span><span class="cov0" title="0">{
@@ -217,78 +253,179 @@ func (h *ShortenerHandler) CreateShortURLHandler(
 func (h *ShortenerHandler) RetrieveShortURLHandler(
         w http.ResponseWriter,
         r *http.Request,
-) <span class="cov4" title="2">{
+) <span class="cov6" title="4">{
         urlID := chi.URLParam(r, "id")
-        if link, exist := h.Repo.GetByID(urlID); exist </span><span class="cov1" title="1">{
+        if link, exist := h.Repo.GetByID(urlID); exist </span><span class="cov3" title="2">{
                 w.Header().Set("Location", link)
                 w.WriteHeader(http.StatusTemporaryRedirect)
                 return
         }</span>
-        <span class="cov1" title="1">http.Error(w, config.NoURLFoundByID, http.StatusNotFound)</span>
+        <span class="cov3" title="2">http.Error(w, config.NoURLFoundByID, http.StatusNotFound)</span>
 }
 
-func (h *ShortenerHandler) saveToRepositories(urlToEncode []byte) string <span class="cov4" title="2">{
-        id := h.Repo.Create(string(urlToEncode))
-        h.BackRepo.CreateBackwardRecord(string(urlToEncode), id)
+func (h *ShortenerHandler) saveToRepositories(urlToEncode []byte) string <span class="cov6" title="4">{
+        id := h.Repo.CreateSave(string(urlToEncode))
+        h.BackRepo.Save(string(urlToEncode), id)
         return id
 }</span>
 
-func (h *ShortenerHandler) readBody(w http.ResponseWriter, r *http.Request) (body []byte, doneWithError bool) <span class="cov10" title="8">{
+func (h *ShortenerHandler) readBody(w http.ResponseWriter, r *http.Request) (body []byte, doneWithError bool) <span class="cov10" title="12">{
         urlToEncode, err := io.ReadAll(r.Body)
         if err != nil </span><span class="cov0" title="0">{
                 http.Error(w, config.UnknownError, http.StatusBadRequest)
                 return nil, true
         }</span>
-        <span class="cov10" title="8">defer r.Body.Close()
+        <span class="cov10" title="12">defer r.Body.Close()
 
-        if string(urlToEncode) == "" </span><span class="cov5" title="3">{
+        if string(urlToEncode) == "" </span><span class="cov6" title="4">{
                 http.Error(w, config.RequestBodyEmptyError, http.StatusBadRequest)
                 return nil, true
         }</span>
-        <span class="cov7" title="5">return urlToEncode, false</span>
+        <span class="cov8" title="8">return urlToEncode, false</span>
 }
 
-func (h *ShortenerHandler) generateResultURL(r *http.Request, id string) string <span class="cov7" title="4">{
-        switch r.TLS </span>{
-        case nil:<span class="cov7" title="4">
-                return "http://" + r.Host + "/" + id</span>
-        default:<span class="cov0" title="0">
-                return "https://" + r.Host + "/" + id</span>
+func (h *ShortenerHandler) generateResultURL(r *http.Request, id string) string <span class="cov7" title="6">{
+        return config.Settings.BaseURL + "/" + id
+}</span>
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package repositories
+
+import (
+        "encoding/json"
+        "errors"
+        "github.com/lithammer/shortuuid"
+        "io"
+        "log"
+        "os"
+        "path/filepath"
+)
+
+type FileRepository struct {
+        Storage  map[string]string
+        FilePath string
+}
+
+func (repo *FileRepository) GetByID(id string) (string, bool) <span class="cov5" title="4">{
+        lock.RLock()
+        result, exist := repo.Storage[id]
+        lock.RUnlock()
+        return result, exist
+}</span>
+
+func (repo *FileRepository) CreateSave(url string) string <span class="cov3" title="2">{
+        shortURL := shortuuid.New()
+        repo.Save(shortURL, url)
+        return shortURL
+}</span>
+
+func (repo *FileRepository) Save(key, value string) <span class="cov5" title="4">{
+        lock.Lock()
+        repo.Storage[key] = value
+        lock.Unlock()
+
+        file := repo.openStorageFile()
+        defer file.Close()
+        encoder := json.NewEncoder(file)
+        encoder.SetIndent("", " ")
+        if err := encoder.Encode(&amp;repo.Storage); err != nil </span><span class="cov0" title="0">{
+                log.Fatal(err)
+        }</span>
+}
+
+func (repo *FileRepository) Restore() <span class="cov9" title="14">{
+        file := repo.openStorageFile()
+        defer file.Close()
+        decoder := json.NewDecoder(file)
+        if err := decoder.Decode(&amp;repo.Storage); err == io.EOF </span><span class="cov5" title="4">{
+                log.Println("State restored")
+        }</span> else<span class="cov8" title="10"> if err != nil </span><span class="cov0" title="0">{
+                log.Fatal(err)
+        }</span>
+}
+
+func (repo *FileRepository) openStorageFile() *os.File <span class="cov10" title="18">{
+        path := "storages"
+        if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) </span><span class="cov3" title="2">{
+                err := os.Mkdir(path, os.ModePerm)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Println(err)
+                }</span>
         }
+        <span class="cov10" title="18">pathToFile := filepath.Join(path, repo.FilePath)
+        file, err := os.OpenFile(pathToFile, os.O_RDWR|os.O_CREATE, 0777)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal(err)
+        }</span>
+        <span class="cov10" title="18">return file</span>
 }
 </pre>
 		
-		<pre class="file" id="file3" style="display: none">package repositories
+		<pre class="file" id="file5" style="display: none">package repositories
 
 import (
         "github.com/lithammer/shortuuid"
         "sync"
 )
 
-type UrlsRepository map[string]string
+type InMemoryRepository struct {
+        Storage map[string]string
+}
 
 var lock = sync.RWMutex{}
 
-func (repo UrlsRepository) GetByID(id string) (string, bool) <span class="cov10" title="6">{
+func (repo *InMemoryRepository) GetByID(id string) (string, bool) <span class="cov10" title="6">{
         lock.RLock()
-        result, exist := repo[id]
+        result, exist := repo.Storage[id]
         lock.RUnlock()
         return result, exist
 }</span>
 
-func (repo UrlsRepository) Create(url string) string <span class="cov4" title="2">{
+func (repo *InMemoryRepository) CreateSave(url string) string <span class="cov4" title="2">{
         shortURL := shortuuid.New()
-        lock.Lock()
-        repo[shortURL] = url
-        lock.Unlock()
+        repo.Save(shortURL, url)
         return shortURL
 }</span>
 
-func (repo UrlsRepository) CreateBackwardRecord(url, id string) <span class="cov4" title="2">{
+func (repo *InMemoryRepository) Save(key, value string) <span class="cov7" title="4">{
         lock.Lock()
-        repo[url] = id
+        repo.Storage[key] = value
         lock.Unlock()
 }</span>
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package utils
+
+import (
+        "github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
+        "github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
+        "log"
+)
+
+func SetRepositories() (repositories.Repository, repositories.Repository) <span class="cov10" title="2">{
+        if config.Settings.FileStoragePath == "" </span><span class="cov1" title="1">{
+                repo := repositories.InMemoryRepository{Storage: make(map[string]string)}
+                backwardRepo := repositories.InMemoryRepository{Storage: make(map[string]string)}
+
+                log.Println("In memory storage`s been chosen")
+                return &amp;repo, &amp;backwardRepo
+        }</span>
+
+        <span class="cov1" title="1">repo := repositories.FileRepository{
+                Storage:  make(map[string]string),
+                FilePath: config.Settings.FileStoragePath,
+        }
+        repo.Restore()
+
+        backwardRepo := repositories.FileRepository{
+                Storage:  make(map[string]string),
+                FilePath: "back_" + config.Settings.FileStoragePath,
+        }
+        backwardRepo.Restore()
+
+        log.Println("File storage`s been  chosen")
+        return &amp;repo, &amp;backwardRepo</span>
+}
 </pre>
 		
 		</div>

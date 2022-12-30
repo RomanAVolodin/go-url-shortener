@@ -86,8 +86,8 @@ func (h *ShortenerHandler) RetrieveShortURLHandler(
 }
 
 func (h *ShortenerHandler) saveToRepositories(urlToEncode []byte) string {
-	id := h.Repo.Create(string(urlToEncode))
-	h.BackRepo.CreateBackwardRecord(string(urlToEncode), id)
+	id := h.Repo.CreateSave(string(urlToEncode))
+	h.BackRepo.Save(string(urlToEncode), id)
 	return id
 }
 
@@ -107,11 +107,5 @@ func (h *ShortenerHandler) readBody(w http.ResponseWriter, r *http.Request) (bod
 }
 
 func (h *ShortenerHandler) generateResultURL(r *http.Request, id string) string {
-	//switch r.TLS {
-	//case nil:
-	//	return "http://" + r.Host + "/" + id
-	//default:
-	//	return "https://" + r.Host + "/" + id
-	//}
 	return config.Settings.BaseURL + "/" + id
 }
