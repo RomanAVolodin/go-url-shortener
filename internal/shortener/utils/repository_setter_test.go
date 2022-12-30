@@ -15,7 +15,7 @@ func TestSetRepositories(t *testing.T) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = os.Remove("back_test.json")
+		err = os.Remove("test.json_back")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -37,7 +37,7 @@ func TestSetRepositories(t *testing.T) {
 			name:     "Check if file repo",
 			filepath: "test.json",
 			want:     &repositories.FileRepository{Storage: make(map[string]string), FilePath: "test.json"},
-			want1:    &repositories.FileRepository{Storage: make(map[string]string), FilePath: "back_test.json"},
+			want1:    &repositories.FileRepository{Storage: make(map[string]string), FilePath: "test.json_back"},
 		},
 	}
 	for _, tt := range tests {
