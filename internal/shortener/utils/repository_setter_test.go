@@ -11,7 +11,11 @@ import (
 
 func TestSetRepositories(t *testing.T) {
 	defer func() {
-		err := os.RemoveAll("storages")
+		err := os.Remove("test.json")
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = os.Remove("back_test.json")
 		if err != nil {
 			log.Fatal(err)
 		}

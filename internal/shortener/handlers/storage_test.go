@@ -15,7 +15,11 @@ import (
 
 func TestFileStorageShortURLHandler(t *testing.T) {
 	defer func() {
-		err := os.RemoveAll("storages")
+		err := os.RemoveAll("test.json")
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = os.RemoveAll("back_test.json")
 		if err != nil {
 			log.Fatal(err)
 		}

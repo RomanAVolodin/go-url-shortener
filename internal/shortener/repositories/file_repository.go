@@ -2,12 +2,10 @@ package repositories
 
 import (
 	"encoding/json"
-	"errors"
 	"github.com/lithammer/shortuuid"
 	"io"
 	"log"
 	"os"
-	"path/filepath"
 )
 
 type FileRepository struct {
@@ -54,15 +52,7 @@ func (repo *FileRepository) Restore() {
 }
 
 func (repo *FileRepository) openStorageFile() *os.File {
-	path := "storages"
-	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(path, os.ModePerm)
-		if err != nil {
-			log.Println(err)
-		}
-	}
-	pathToFile := filepath.Join(path, repo.FilePath)
-	file, err := os.OpenFile(pathToFile, os.O_RDWR|os.O_CREATE, 0777)
+	file, err := os.OpenFile(repo.FilePath, os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
 		log.Fatal(err)
 	}
