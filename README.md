@@ -1,5 +1,5 @@
 # go-musthave-shortener-tpl
-![Coverage](https://img.shields.io/badge/Coverage-0.0%25-red)
+![Coverage](https://img.shields.io/badge/Coverage-91.7%25-brightgreen)
 
 Шаблон репозитория для практического трек "Веб-разработка на Go"
 
