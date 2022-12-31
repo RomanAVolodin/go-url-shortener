@@ -33,12 +33,9 @@ func init() {
 	flagSet.StringVar(&Settings.ServerAddress, "a", "localhost:8080", "Server address with port")
 	flagSet.StringVar(&Settings.BaseURL, "b", "http://localhost:8080", "Full featured base url")
 	flagSet.StringVar(&Settings.FileStoragePath, "f", "", "File storage path")
-	err := flagSet.Parse(os.Args[1:])
-	if err != nil {
-		log.Fatal(err)
-	}
+	flagSet.Parse(os.Args[1:])
 
-	err = env.Parse(&Settings)
+	err := env.Parse(&Settings)
 	if err != nil {
 		log.Fatal(err)
 	}
