@@ -1,66 +1,71 @@
 package handlers
 
 import (
+	"encoding/json"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
-	repo "github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"io"
 	"net/http"
 )
 
-type ShortenerHandler struct {
-	*chi.Mux
-	Repo     repo.Repository
-	BackRepo repo.Repository
+type ShortenerCreateDTO struct {
+	URL string `json:"url"`
 }
 
-func NewShortenerHandler(repo repo.Repository, backRepo repo.Repository) *ShortenerHandler {
-	h := &ShortenerHandler{
-		Mux:      chi.NewMux(),
-		Repo:     repo,
-		BackRepo: backRepo,
-	}
-	h.Use(middleware.RequestID)
-	h.Use(middleware.RealIP)
-	h.Use(middleware.Logger)
-	h.Use(middleware.Recoverer)
+type ShortenerResponseDTO struct {
+	Result string `json:"result"`
+}
 
-	h.Get("/{id}", h.RetrieveShortURLHandler)
-	h.Post("/", h.CreateShortURLHandler)
-	h.MethodNotAllowed(func(writer http.ResponseWriter, request *http.Request) {
-		http.Error(writer, config.OnlyGetPostRequestAllowedError, http.StatusMethodNotAllowed)
-	})
-	return h
+func (h *ShortenerHandler) CreateJSONShortURLHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	requestBody, doneWithError := h.readBody(w, r)
+	if doneWithError {
+		return
+	}
+	var createDTO ShortenerCreateDTO
+	if err := json.Unmarshal(requestBody, &createDTO); err != nil || createDTO.URL == "" {
+		http.Error(w, config.BadInputData, http.StatusUnprocessableEntity)
+		return
+	}
+
+	var id string
+	if link, exist := h.BackRepo.GetByID(createDTO.URL); exist {
+		id = link
+	} else {
+		id = h.saveToRepositories([]byte(createDTO.URL))
+	}
+
+	responseDTO := ShortenerResponseDTO{Result: h.generateResultURL(r, id)}
+	jsonResponse, err := json.Marshal(responseDTO)
+	if err != nil {
+		http.Error(w, config.UnknownError, http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	w.Write(jsonResponse)
 }
 
 func (h *ShortenerHandler) CreateShortURLHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	urlToEncode, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, config.UnknownError, http.StatusBadRequest)
-		return
-	}
-	defer r.Body.Close()
-
-	if string(urlToEncode) == "" {
-		http.Error(w, config.RequestBodyEmptyError, http.StatusBadRequest)
+	urlToEncode, doneWithError := h.readBody(w, r)
+	if doneWithError {
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
 
 	if link, exist := h.BackRepo.GetByID(string(urlToEncode)); exist {
-		w.Write([]byte(config.BaseURL + link))
+		w.Write([]byte(h.generateResultURL(r, link)))
 		return
 	}
 
-	// TODO: wrap into one transaction
-	id := h.Repo.Create(string(urlToEncode))
-	h.BackRepo.CreateBackwardRecord(string(urlToEncode), id)
+	id := h.saveToRepositories(urlToEncode)
 
-	_, err = w.Write([]byte(config.BaseURL + id))
+	_, err := w.Write([]byte(h.generateResultURL(r, id)))
 	if err != nil {
 		http.Error(w, config.UnknownError, http.StatusInternalServerError)
 		return
@@ -78,4 +83,29 @@ func (h *ShortenerHandler) RetrieveShortURLHandler(
 		return
 	}
 	http.Error(w, config.NoURLFoundByID, http.StatusNotFound)
+}
+
+func (h *ShortenerHandler) saveToRepositories(urlToEncode []byte) string {
+	id := h.Repo.CreateSave(string(urlToEncode))
+	h.BackRepo.Save(string(urlToEncode), id)
+	return id
+}
+
+func (h *ShortenerHandler) readBody(w http.ResponseWriter, r *http.Request) (body []byte, doneWithError bool) {
+	urlToEncode, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, config.UnknownError, http.StatusBadRequest)
+		return nil, true
+	}
+	defer r.Body.Close()
+
+	if string(urlToEncode) == "" {
+		http.Error(w, config.RequestBodyEmptyError, http.StatusBadRequest)
+		return nil, true
+	}
+	return urlToEncode, false
+}
+
+func (h *ShortenerHandler) generateResultURL(r *http.Request, id string) string {
+	return config.Settings.BaseURL + "/" + id
 }
