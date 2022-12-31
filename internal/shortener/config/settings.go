@@ -25,17 +25,20 @@ type AppSettings struct {
 var Settings AppSettings
 
 func init() {
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-	flag.Usage = func() {
+	flagSet := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+	flagSet.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Использование консольной команды %s:\n", os.Args[0])
 		flag.PrintDefaults()
 	}
-	flag.StringVar(&Settings.ServerAddress, "a", "localhost:8080", "Server address with port")
-	flag.StringVar(&Settings.BaseURL, "b", "http://localhost:8080", "Full featured base url")
-	flag.StringVar(&Settings.FileStoragePath, "f", "", "File storage path")
-	flag.Parse()
+	flagSet.StringVar(&Settings.ServerAddress, "a", "localhost:8080", "Server address with port")
+	flagSet.StringVar(&Settings.BaseURL, "b", "http://localhost:8080", "Full featured base url")
+	flagSet.StringVar(&Settings.FileStoragePath, "f", "", "File storage path")
+	err := flagSet.Parse(os.Args[1:])
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	err := env.Parse(&Settings)
+	err = env.Parse(&Settings)
 	if err != nil {
 		log.Fatal(err)
 	}
