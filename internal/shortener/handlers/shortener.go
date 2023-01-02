@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
+	mw "github.com/RomanAVolodin/go-url-shortener/internal/shortener/middlewares"
 	repo "github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -24,6 +25,8 @@ func NewShortenerHandler(repo repo.Repository, backRepo repo.Repository) *Shorte
 	h.Use(middleware.RealIP)
 	h.Use(middleware.Logger)
 	h.Use(middleware.Recoverer)
+	h.Use(mw.GzipMiddleware)
+	h.Use(mw.RequestUnzip)
 
 	h.Get("/{id}", h.RetrieveShortURLHandler)
 	h.Post("/", h.CreateShortURLHandler)
