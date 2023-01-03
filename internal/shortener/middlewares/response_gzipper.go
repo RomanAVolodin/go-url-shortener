@@ -3,6 +3,7 @@ package middlewares
 import (
 	"compress/gzip"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -25,13 +26,16 @@ func GzipMiddleware(next http.Handler) http.Handler {
 
 		gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
 		if err != nil {
-			io.WriteString(w, err.Error())
+			next.ServeHTTP(w, r)
 			return
 		}
-		defer gz.Close()
+		defer func() {
+			if err = gz.Close(); err != nil {
+				log.Print(err)
+			}
+		}()
 
 		w.Header().Set("Content-Encoding", "gzip")
-		// передаём обработчику страницы переменную типа gzipWriter для вывода данных
 		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
 	})
 }

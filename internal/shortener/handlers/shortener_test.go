@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"bytes"
+	"compress/gzip"
+	"fmt"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
 	"github.com/stretchr/testify/assert"
@@ -206,4 +209,60 @@ func TestShortURLHandler(t *testing.T) {
 			assert.Equal(t, tt.wantedResult.locationHeader, res.Header.Get("Location"))
 		})
 	}
+}
+
+func TestRequestUnzip(t *testing.T) {
+	repo := &repositories.InMemoryRepository{Storage: make(map[string]string)}
+	backRepo := &repositories.InMemoryRepository{Storage: make(map[string]string)}
+
+	request := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader("{\"url\": \"https://mail.ru\"}"))
+	request.Header = http.Header{
+		"Content-Type":    {"application/x-www-form-urlencoded; param=value"},
+		"Accept-Encoding": {"gzip"},
+	}
+	w := httptest.NewRecorder()
+	h := NewShortenerHandler(repo, backRepo)
+	h.ServeHTTP(w, request)
+	res := w.Result()
+	defer res.Body.Close()
+	_, err := io.ReadAll(res.Body)
+
+	assert.Equal(t, http.StatusCreated, res.StatusCode)
+	assert.Nil(t, err)
+	assert.Equal(t, "gzip", res.Header.Get("Content-Encoding"))
+}
+
+func TestZippedContent(t *testing.T) {
+	repo := &repositories.InMemoryRepository{Storage: make(map[string]string)}
+	backRepo := &repositories.InMemoryRepository{Storage: make(map[string]string)}
+
+	zipped, _ := compress([]byte("{\"url\": \"https://mail.ru\"}"))
+	request := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader(zipped))
+	request.Header = http.Header{
+		"Content-Type":     {"application/x-www-form-urlencoded; param=value"},
+		"Content-Encoding": {"gzip"},
+	}
+	w := httptest.NewRecorder()
+	h := NewShortenerHandler(repo, backRepo)
+	h.ServeHTTP(w, request)
+	res := w.Result()
+	defer res.Body.Close()
+	_, err := io.ReadAll(res.Body)
+
+	assert.Equal(t, http.StatusCreated, res.StatusCode)
+	assert.Nil(t, err)
+}
+
+func compress(data []byte) ([]byte, error) {
+	var b bytes.Buffer
+	w := gzip.NewWriter(&b)
+	_, err := w.Write(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed write data to compress temporary buffer: %v", err)
+	}
+	err = w.Close()
+	if err != nil {
+		return nil, fmt.Errorf("failed compress data: %v", err)
+	}
+	return b.Bytes(), nil
 }
