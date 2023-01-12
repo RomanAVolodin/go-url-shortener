@@ -41,7 +41,7 @@ func TestSetRepositories(t *testing.T) {
 		},
 		{
 			name:     "Check if file repo with incorrect filename should switch to in memory storage",
-			filepath: "/root/tolll",
+			filepath: "/some_unreal_name",
 			want:     &repositories.InMemoryRepository{Storage: make(map[string]string)},
 			want1:    &repositories.InMemoryRepository{Storage: make(map[string]string)},
 		},
