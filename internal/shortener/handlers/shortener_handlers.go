@@ -96,8 +96,10 @@ func (h *ShortenerHandler) RetrieveShortURLHandler(
 
 func (h *ShortenerHandler) saveToRepositories(urlToEncode []byte) (string, error) {
 	id, err := h.Repo.CreateSave(string(urlToEncode))
+	if err != nil {
+		return "", err
+	}
 	_, err = h.BackRepo.Save(string(urlToEncode), id)
-
 	return id, err
 }
 
