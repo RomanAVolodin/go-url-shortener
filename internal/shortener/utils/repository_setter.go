@@ -7,26 +7,27 @@ import (
 )
 
 func SetRepositories() (repositories.Repository, repositories.Repository) {
-	if config.Settings.FileStoragePath == "" {
-		repo := repositories.InMemoryRepository{Storage: make(map[string]string)}
-		backwardRepo := repositories.InMemoryRepository{Storage: make(map[string]string)}
+	if config.Settings.FileStoragePath != "" {
+		repo := repositories.FileRepository{
+			Storage:  make(map[string]string),
+			FilePath: config.Settings.FileStoragePath,
+		}
 
-		log.Println("In memory storage`s been chosen")
-		return &repo, &backwardRepo
+		backwardRepo := repositories.FileRepository{
+			Storage:  make(map[string]string),
+			FilePath: config.Settings.FileStoragePath + "_back",
+		}
+
+		if err, errBack := repo.Restore(), backwardRepo.Restore(); err == nil && errBack == nil {
+			log.Println("File storage`s been  chosen")
+			return &repo, &backwardRepo
+		}
+		log.Println("Error while choosing file storage")
 	}
 
-	repo := repositories.FileRepository{
-		Storage:  make(map[string]string),
-		FilePath: config.Settings.FileStoragePath,
-	}
-	repo.Restore()
+	repo := repositories.InMemoryRepository{Storage: make(map[string]string)}
+	backwardRepo := repositories.InMemoryRepository{Storage: make(map[string]string)}
 
-	backwardRepo := repositories.FileRepository{
-		Storage:  make(map[string]string),
-		FilePath: config.Settings.FileStoragePath + "_back",
-	}
-	backwardRepo.Restore()
-
-	log.Println("File storage`s been  chosen")
+	log.Println("In memory storage`s been chosen")
 	return &repo, &backwardRepo
 }

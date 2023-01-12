@@ -31,10 +31,15 @@ func (h *ShortenerHandler) CreateJSONShortURLHandler(
 	}
 
 	var id string
+	var err error
 	if link, exist := h.BackRepo.GetByID(createDTO.URL); exist {
 		id = link
 	} else {
-		id = h.saveToRepositories([]byte(createDTO.URL))
+		id, err = h.saveToRepositories([]byte(createDTO.URL))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	responseDTO := ShortenerResponseDTO{Result: h.generateResultURL(r, id)}
@@ -63,9 +68,13 @@ func (h *ShortenerHandler) CreateShortURLHandler(
 		return
 	}
 
-	id := h.saveToRepositories(urlToEncode)
+	id, err := h.saveToRepositories(urlToEncode)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	_, err := w.Write([]byte(h.generateResultURL(r, id)))
+	_, err = w.Write([]byte(h.generateResultURL(r, id)))
 	if err != nil {
 		http.Error(w, config.UnknownError, http.StatusInternalServerError)
 		return
@@ -85,10 +94,11 @@ func (h *ShortenerHandler) RetrieveShortURLHandler(
 	http.Error(w, config.NoURLFoundByID, http.StatusNotFound)
 }
 
-func (h *ShortenerHandler) saveToRepositories(urlToEncode []byte) string {
-	id := h.Repo.CreateSave(string(urlToEncode))
-	h.BackRepo.Save(string(urlToEncode), id)
-	return id
+func (h *ShortenerHandler) saveToRepositories(urlToEncode []byte) (string, error) {
+	id, err := h.Repo.CreateSave(string(urlToEncode))
+	_, err = h.BackRepo.Save(string(urlToEncode), id)
+
+	return id, err
 }
 
 func (h *ShortenerHandler) readBody(w http.ResponseWriter, r *http.Request) (body []byte, doneWithError bool) {

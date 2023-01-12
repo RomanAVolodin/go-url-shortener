@@ -18,14 +18,14 @@ func (repo *InMemoryRepository) GetByID(id string) (string, bool) {
 	return result, exist
 }
 
-func (repo *InMemoryRepository) CreateSave(url string) string {
+func (repo *InMemoryRepository) CreateSave(url string) (string, error) {
 	shortURL := shortuuid.New()
-	repo.Save(shortURL, url)
-	return shortURL
+	return repo.Save(shortURL, url)
 }
 
-func (repo *InMemoryRepository) Save(key, value string) {
+func (repo *InMemoryRepository) Save(key, value string) (string, error) {
 	lock.Lock()
 	repo.Storage[key] = value
 	lock.Unlock()
+	return key, nil
 }

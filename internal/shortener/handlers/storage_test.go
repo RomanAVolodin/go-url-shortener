@@ -113,8 +113,8 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.repo.Restore()
-			tt.backRepo.Restore()
+			_ = tt.repo.Restore()
+			_ = tt.backRepo.Restore()
 
 			url := "/"
 			if tt.requestURL != "" {
