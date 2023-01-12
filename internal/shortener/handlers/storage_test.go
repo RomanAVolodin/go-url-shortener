@@ -99,7 +99,7 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 			},
 		},
 		{
-			name:        "JSON should return error with wrong body body",
+			name:        "JSON should return error with wrong body",
 			requestType: http.MethodPost,
 			requestURL:  "/api/shorten",
 			requestBody: "{\"wrongfield\": \"https://mail.ru\"}",
