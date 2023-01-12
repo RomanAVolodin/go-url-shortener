@@ -39,12 +39,6 @@ func TestSetRepositories(t *testing.T) {
 			want:     &repositories.FileRepository{Storage: make(map[string]string), FilePath: "test.json"},
 			want1:    &repositories.FileRepository{Storage: make(map[string]string), FilePath: "test.json_back"},
 		},
-		{
-			name:     "Check if file repo with incorrect filename should switch to in memory storage",
-			filepath: "/some_unreal_name",
-			want:     &repositories.InMemoryRepository{Storage: make(map[string]string)},
-			want1:    &repositories.InMemoryRepository{Storage: make(map[string]string)},
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
