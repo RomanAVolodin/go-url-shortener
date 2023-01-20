@@ -2,32 +2,27 @@ package utils
 
 import (
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
 	"log"
 )
 
-func SetRepositories() (repositories.Repository, repositories.Repository) {
+func SetRepository() repositories.Repository {
 	if config.Settings.FileStoragePath != "" {
 		repo := repositories.FileRepository{
-			Storage:  make(map[string]string),
+			Storage:  make(map[string]entities.ShortUrl),
 			FilePath: config.Settings.FileStoragePath,
 		}
 
-		backwardRepo := repositories.FileRepository{
-			Storage:  make(map[string]string),
-			FilePath: config.Settings.FileStoragePath + "_back",
-		}
-
-		if err, errBack := repo.Restore(), backwardRepo.Restore(); err == nil && errBack == nil {
+		if err := repo.Restore(); err == nil {
 			log.Println("File storage`s been  chosen")
-			return &repo, &backwardRepo
+			return &repo
 		}
 		log.Println("Error while choosing file storage")
 	}
 
-	repo := repositories.InMemoryRepository{Storage: make(map[string]string)}
-	backwardRepo := repositories.InMemoryRepository{Storage: make(map[string]string)}
+	repo := repositories.InMemoryRepository{Storage: make(map[string]entities.ShortUrl)}
 
 	log.Println("In memory storage`s been chosen")
-	return &repo, &backwardRepo
+	return &repo
 }

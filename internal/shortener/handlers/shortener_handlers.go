@@ -3,7 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/middlewares"
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/utils"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/lithammer/shortuuid"
 	"io"
 	"net/http"
 )
@@ -30,19 +35,15 @@ func (h *ShortenerHandler) CreateJSONShortURLHandler(
 		return
 	}
 
-	var id string
-	var err error
-	if link, exist := h.BackRepo.GetByID(createDTO.URL); exist {
-		id = link
-	} else {
-		id, err = h.saveToRepositories([]byte(createDTO.URL))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	userId, err := middlewares.GetUserIDFromCookie(r)
+
+	shortUrl, err := h.saveToRepository(createDTO.URL, userId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	responseDTO := ShortenerResponseDTO{Result: h.generateResultURL(r, id)}
+	responseDTO := ShortenerResponseDTO{Result: shortUrl.Short}
 	jsonResponse, err := json.Marshal(responseDTO)
 	if err != nil {
 		http.Error(w, config.UnknownError, http.StatusBadRequest)
@@ -63,18 +64,15 @@ func (h *ShortenerHandler) CreateShortURLHandler(
 	}
 	w.WriteHeader(http.StatusCreated)
 
-	if link, exist := h.BackRepo.GetByID(string(urlToEncode)); exist {
-		w.Write([]byte(h.generateResultURL(r, link)))
-		return
-	}
+	userId, err := middlewares.GetUserIDFromCookie(r)
 
-	id, err := h.saveToRepositories(urlToEncode)
+	shortUrl, err := h.saveToRepository(string(urlToEncode), userId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	_, err = w.Write([]byte(h.generateResultURL(r, id)))
+	_, err = w.Write([]byte(shortUrl.Short))
 	if err != nil {
 		http.Error(w, config.UnknownError, http.StatusInternalServerError)
 		return
@@ -86,21 +84,52 @@ func (h *ShortenerHandler) RetrieveShortURLHandler(
 	r *http.Request,
 ) {
 	urlID := chi.URLParam(r, "id")
-	if link, exist := h.Repo.GetByID(urlID); exist {
-		w.Header().Set("Location", link)
+	if urlItem, exist := h.Repo.GetByID(urlID); exist {
+		w.Header().Set("Location", urlItem.Original)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 		return
 	}
 	http.Error(w, config.NoURLFoundByID, http.StatusNotFound)
 }
 
-func (h *ShortenerHandler) saveToRepositories(urlToEncode []byte) (string, error) {
-	id, err := h.Repo.CreateSave(string(urlToEncode))
+func (h *ShortenerHandler) GetUsersRecordsHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	userId, err := middlewares.GetUserIDFromCookie(r)
 	if err != nil {
-		return "", err
+		http.Error(w, config.NoUserIdProvided, http.StatusBadRequest)
+		return
 	}
-	_, err = h.BackRepo.Save(string(urlToEncode), id)
-	return id, err
+
+	records := h.Repo.GetByUserId(userId)
+	if len(records) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	responseDTOs := make([]entities.ShortUrlResponseDto, 0, 8)
+	for _, shortUrl := range records {
+		responseDTOs = append(responseDTOs, shortUrl.ToResponseDto())
+	}
+
+	jsonRecords, _ := json.Marshal(responseDTOs)
+
+	_, err = w.Write(jsonRecords)
+	if err != nil {
+		http.Error(w, config.UnknownError, http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *ShortenerHandler) saveToRepository(urlToEncode string, userId uuid.UUID) (entities.ShortUrl, error) {
+	id := shortuuid.New()
+	shortUrl := entities.ShortUrl{
+		Id:       id,
+		Short:    utils.GenerateResultURL(id),
+		Original: urlToEncode,
+		UserId:   userId,
+	}
+	return h.Repo.Create(shortUrl)
 }
 
 func (h *ShortenerHandler) readBody(w http.ResponseWriter, r *http.Request) (body []byte, doneWithError bool) {
@@ -116,8 +145,4 @@ func (h *ShortenerHandler) readBody(w http.ResponseWriter, r *http.Request) (bod
 		return nil, true
 	}
 	return urlToEncode, false
-}
-
-func (h *ShortenerHandler) generateResultURL(r *http.Request, id string) string {
-	return config.Settings.BaseURL + "/" + id
 }

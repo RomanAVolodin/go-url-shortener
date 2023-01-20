@@ -5,13 +5,17 @@ import (
 	"compress/gzip"
 	"fmt"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/middlewares"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
+	tLoc "github.com/RomanAVolodin/go-url-shortener/internal/shortener/tests"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestShortURLHandler(t *testing.T) {
@@ -27,7 +31,6 @@ func TestShortURLHandler(t *testing.T) {
 		requestType  string
 		requestBody  string
 		repo         repositories.Repository
-		backRepo     repositories.Repository
 		wantedResult wanted
 	}{
 		{
@@ -66,22 +69,10 @@ func TestShortURLHandler(t *testing.T) {
 			name:        "URL link should be generated",
 			requestType: http.MethodPost,
 			requestBody: "https://ya.ru",
-			repo:        &repositories.InMemoryRepository{Storage: make(map[string]string)},
-			backRepo:    &repositories.InMemoryRepository{Storage: make(map[string]string)},
+			repo:        &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortUrl)},
 			wantedResult: wanted{
 				code:              http.StatusCreated,
 				responseStartWith: config.Settings.BaseURL,
-			},
-		},
-		{
-			name:        "URL link should be returned while creating if already generated",
-			requestType: http.MethodPost,
-			requestBody: "https://ya.ru",
-			repo:        &repositories.InMemoryRepository{},
-			backRepo:    &repositories.InMemoryRepository{Storage: map[string]string{"https://ya.ru": "qwerty"}},
-			wantedResult: wanted{
-				code:          http.StatusCreated,
-				exactResponse: config.Settings.BaseURL + "/qwerty",
 			},
 		},
 		{
@@ -94,23 +85,25 @@ func TestShortURLHandler(t *testing.T) {
 		},
 		{
 			name:        "URL link should be returned",
-			requestURL:  "/qwerty",
+			requestURL:  "/" + tLoc.ShortUrlFixture.Id,
 			requestType: http.MethodGet,
-			requestBody: "https://ya.ru",
-			repo:        &repositories.InMemoryRepository{Storage: map[string]string{"qwerty": "https://ya.ru"}},
-			backRepo:    &repositories.InMemoryRepository{Storage: make(map[string]string)},
+			requestBody: tLoc.ShortUrlFixture.Original,
+			repo: &repositories.InMemoryRepository{
+				Storage: map[string]entities.ShortUrl{tLoc.ShortUrlFixture.Id: tLoc.ShortUrlFixture},
+			},
 			wantedResult: wanted{
 				code:           http.StatusTemporaryRedirect,
-				locationHeader: "https://ya.ru",
+				locationHeader: tLoc.ShortUrlFixture.Original,
 			},
 		},
 		{
 			name:        "URL link should not be found with wrong id",
 			requestURL:  "/randomid",
 			requestType: http.MethodGet,
-			requestBody: "https://ya.ru",
-			repo:        &repositories.InMemoryRepository{Storage: map[string]string{"qwerty": "https://ya.ru"}},
-			backRepo:    &repositories.InMemoryRepository{Storage: make(map[string]string)},
+			requestBody: tLoc.ShortUrlFixture.Original,
+			repo: &repositories.InMemoryRepository{
+				Storage: map[string]entities.ShortUrl{tLoc.ShortUrlFixture.Id: tLoc.ShortUrlFixture},
+			},
 			wantedResult: wanted{
 				code:          http.StatusNotFound,
 				exactResponse: config.NoURLFoundByID,
@@ -130,8 +123,7 @@ func TestShortURLHandler(t *testing.T) {
 			requestType: http.MethodPost,
 			requestURL:  "/api/shorten",
 			requestBody: "{\"url\": \"https://mail.ru\"}",
-			repo:        &repositories.InMemoryRepository{Storage: make(map[string]string)},
-			backRepo:    &repositories.InMemoryRepository{Storage: make(map[string]string)},
+			repo:        &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortUrl)},
 			wantedResult: wanted{
 				code:              http.StatusCreated,
 				responseStartWith: "{\"result\":\"http://",
@@ -141,8 +133,7 @@ func TestShortURLHandler(t *testing.T) {
 			name:        "JSON should return error with empty body",
 			requestType: http.MethodPost,
 			requestURL:  "/api/shorten",
-			repo:        &repositories.InMemoryRepository{Storage: make(map[string]string)},
-			backRepo:    &repositories.InMemoryRepository{Storage: make(map[string]string)},
+			repo:        &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortUrl)},
 			wantedResult: wanted{
 				code:          http.StatusBadRequest,
 				exactResponse: config.RequestBodyEmptyError,
@@ -153,23 +144,10 @@ func TestShortURLHandler(t *testing.T) {
 			requestType: http.MethodPost,
 			requestURL:  "/api/shorten",
 			requestBody: "{\"wrongfield\": \"https://mail.ru\"}",
-			repo:        &repositories.InMemoryRepository{Storage: make(map[string]string)},
-			backRepo:    &repositories.InMemoryRepository{Storage: make(map[string]string)},
+			repo:        &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortUrl)},
 			wantedResult: wanted{
 				code:          http.StatusUnprocessableEntity,
 				exactResponse: config.BadInputData,
-			},
-		},
-		{
-			name:        "JSON URL link should be returned while creating if already generated",
-			requestType: http.MethodPost,
-			requestURL:  "/api/shorten",
-			requestBody: "{\"url\": \"https://mail.ru\"}",
-			repo:        &repositories.InMemoryRepository{Storage: make(map[string]string)},
-			backRepo:    &repositories.InMemoryRepository{Storage: map[string]string{"https://mail.ru": "qwerty"}},
-			wantedResult: wanted{
-				code:          http.StatusCreated,
-				exactResponse: "{\"result\":\"" + config.Settings.BaseURL + "/qwerty\"}",
 			},
 		},
 	}
@@ -188,7 +166,7 @@ func TestShortURLHandler(t *testing.T) {
 			request.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
 
 			w := httptest.NewRecorder()
-			h := NewShortenerHandler(tt.repo, tt.backRepo)
+			h := NewShortenerHandler(tt.repo)
 			h.ServeHTTP(w, request)
 			res := w.Result()
 			defer res.Body.Close()
@@ -212,16 +190,14 @@ func TestShortURLHandler(t *testing.T) {
 }
 
 func TestRequestUnzip(t *testing.T) {
-	repo := &repositories.InMemoryRepository{Storage: make(map[string]string)}
-	backRepo := &repositories.InMemoryRepository{Storage: make(map[string]string)}
-
+	repo := &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortUrl)}
 	request := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader("{\"url\": \"https://mail.ru\"}"))
 	request.Header = http.Header{
 		"Content-Type":    {"application/x-www-form-urlencoded; param=value"},
 		"Accept-Encoding": {"gzip"},
 	}
 	w := httptest.NewRecorder()
-	h := NewShortenerHandler(repo, backRepo)
+	h := NewShortenerHandler(repo)
 	h.ServeHTTP(w, request)
 	res := w.Result()
 	defer res.Body.Close()
@@ -233,8 +209,7 @@ func TestRequestUnzip(t *testing.T) {
 }
 
 func TestZippedContent(t *testing.T) {
-	repo := &repositories.InMemoryRepository{Storage: make(map[string]string)}
-	backRepo := &repositories.InMemoryRepository{Storage: make(map[string]string)}
+	repo := &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortUrl)}
 
 	zipped, _ := compress([]byte("{\"url\": \"https://mail.ru\"}"))
 	request := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader(zipped))
@@ -243,7 +218,7 @@ func TestZippedContent(t *testing.T) {
 		"Content-Encoding": {"gzip"},
 	}
 	w := httptest.NewRecorder()
-	h := NewShortenerHandler(repo, backRepo)
+	h := NewShortenerHandler(repo)
 	h.ServeHTTP(w, request)
 	res := w.Result()
 	defer res.Body.Close()
@@ -265,4 +240,119 @@ func compress(data []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed compress data: %v", err)
 	}
 	return b.Bytes(), nil
+}
+
+func TestAuthCookies(t *testing.T) {
+	type wanted struct {
+		cookieString string
+		response     string
+		code         int
+	}
+	tests := []struct {
+		name         string
+		requestURL   string
+		requestType  string
+		requestBody  string
+		cookie       string
+		repo         repositories.Repository
+		wantedResult wanted
+	}{
+		{
+			name:        "Request without auth cookie should obtain a new one in response",
+			requestType: http.MethodPost,
+			requestURL:  "/api/shorten",
+			requestBody: "{\"url\": \"https://mail.ru\"}",
+			repo:        &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortUrl)},
+			wantedResult: wanted{
+				cookieString: "",
+				code:         http.StatusCreated,
+			},
+		},
+		{
+			name:        "Request with auth cookie should return the same",
+			requestType: http.MethodPost,
+			requestURL:  "/api/shorten",
+			requestBody: "{\"url\": \"https://mail.ru\"}",
+			cookie:      middlewares.GenerateCookieStringForUserId(tLoc.UserIdFixture),
+			repo:        &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortUrl)},
+			wantedResult: wanted{
+				cookieString: middlewares.GenerateCookieStringForUserId(tLoc.UserIdFixture),
+				code:         http.StatusCreated,
+			},
+		},
+		{
+			name:        "Request with incorrect auth cookie should return correct one",
+			requestType: http.MethodPost,
+			requestURL:  "/api/shorten",
+			requestBody: "{\"url\": \"https://mail.ru\"}",
+			cookie:      "wrong_cookie",
+			repo:        &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortUrl)},
+			wantedResult: wanted{
+				code: http.StatusCreated,
+			},
+		},
+		{
+			name:        "User should receive empty answer",
+			requestType: http.MethodGet,
+			requestURL:  "/api/user/urls",
+			cookie:      middlewares.GenerateCookieStringForUserId(tLoc.UserIdFixture),
+			repo:        &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortUrl)},
+			wantedResult: wanted{
+				code: http.StatusNoContent,
+			},
+		},
+		{
+			name:        "User should receive his records",
+			requestType: http.MethodGet,
+			requestURL:  "/api/user/urls",
+			cookie:      middlewares.GenerateCookieStringForUserId(tLoc.UserIdFixture),
+			repo: &repositories.InMemoryRepository{
+				Storage: map[string]entities.ShortUrl{tLoc.ShortUrlFixture.Id: tLoc.ShortUrlFixture},
+			},
+			wantedResult: wanted{
+				code:     http.StatusOK,
+				response: string(tLoc.JsonStorageWithOneElement),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			request := httptest.NewRequest(tt.requestType, tt.requestURL, strings.NewReader(tt.requestBody))
+			request.Header = http.Header{
+				"Content-Type": {"application/x-www-form-urlencoded; param=value"},
+			}
+			w := httptest.NewRecorder()
+			h := NewShortenerHandler(tt.repo)
+
+			if tt.cookie != "" {
+				cookie := &http.Cookie{
+					Name:     middlewares.CookieName,
+					Value:    tt.cookie,
+					Expires:  time.Now().Add(24 * time.Hour),
+					HttpOnly: true,
+				}
+				request.AddCookie(cookie)
+			}
+			h.ServeHTTP(w, request)
+			res := w.Result()
+			cookies := res.Cookies()
+			var cookieReceived *http.Cookie
+			for _, c := range cookies {
+				if c.Name == middlewares.CookieName {
+					cookieReceived = c
+				}
+			}
+			defer res.Body.Close()
+			resBody, _ := io.ReadAll(res.Body)
+
+			assert.Equal(t, tt.wantedResult.code, res.StatusCode)
+			assert.NotNil(t, cookieReceived)
+			if tt.wantedResult.cookieString != "" {
+				assert.Equal(t, tt.wantedResult.cookieString, cookieReceived.Value)
+			}
+			if tt.wantedResult.response != "" {
+				assert.Equal(t, tt.wantedResult.response, strings.Trim(string(resBody), "\n"))
+			}
+		})
+	}
 }
