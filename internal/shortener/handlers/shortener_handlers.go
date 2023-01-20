@@ -35,9 +35,13 @@ func (h *ShortenerHandler) CreateJSONShortURLHandler(
 		return
 	}
 
-	userId, err := middlewares.GetUserIDFromCookie(r)
+	userID, err := middlewares.GetUserIDFromCookie(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	shortUrl, err := h.saveToRepository(createDTO.URL, userId)
+	shortUrl, err := h.saveToRepository(createDTO.URL, userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -64,9 +68,13 @@ func (h *ShortenerHandler) CreateShortURLHandler(
 	}
 	w.WriteHeader(http.StatusCreated)
 
-	userId, err := middlewares.GetUserIDFromCookie(r)
+	userID, err := middlewares.GetUserIDFromCookie(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	shortUrl, err := h.saveToRepository(string(urlToEncode), userId)
+	shortUrl, err := h.saveToRepository(string(urlToEncode), userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -96,24 +104,26 @@ func (h *ShortenerHandler) GetUsersRecordsHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	userId, err := middlewares.GetUserIDFromCookie(r)
+	userID, err := middlewares.GetUserIDFromCookie(r)
 	if err != nil {
-		http.Error(w, config.NoUserIdProvided, http.StatusBadRequest)
+		http.Error(w, config.NoUserIDProvided, http.StatusBadRequest)
 		return
 	}
 
-	records := h.Repo.GetByUserId(userId)
+	records := h.Repo.GetByUserID(userID)
 	if len(records) == 0 {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	responseDTOs := make([]entities.ShortUrlResponseDto, 0, 8)
-	for _, shortUrl := range records {
-		responseDTOs = append(responseDTOs, shortUrl.ToResponseDto())
+	responseDTOs := make([]entities.ShortURLResponseDto, 0, 8)
+	for _, shortURL := range records {
+		responseDTOs = append(responseDTOs, shortURL.ToResponseDto())
 	}
 
 	jsonRecords, _ := json.Marshal(responseDTOs)
 
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(jsonRecords)
 	if err != nil {
 		http.Error(w, config.UnknownError, http.StatusInternalServerError)
@@ -121,15 +131,15 @@ func (h *ShortenerHandler) GetUsersRecordsHandler(
 	}
 }
 
-func (h *ShortenerHandler) saveToRepository(urlToEncode string, userId uuid.UUID) (entities.ShortUrl, error) {
+func (h *ShortenerHandler) saveToRepository(urlToEncode string, userID uuid.UUID) (entities.ShortURL, error) {
 	id := shortuuid.New()
-	shortUrl := entities.ShortUrl{
-		Id:       id,
+	shortURL := entities.ShortURL{
+		ID:       id,
 		Short:    utils.GenerateResultURL(id),
 		Original: urlToEncode,
-		UserId:   userId,
+		UserID:   userID,
 	}
-	return h.Repo.Create(shortUrl)
+	return h.Repo.Create(shortURL)
 }
 
 func (h *ShortenerHandler) readBody(w http.ResponseWriter, r *http.Request) (body []byte, doneWithError bool) {

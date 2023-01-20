@@ -14,7 +14,7 @@ const (
 	BadInputData                   = "Incorrect request body data"
 	UnknownError                   = "Something bad's happened"
 	NoURLFoundByID                 = "No url found by id"
-	NoUserIdProvided               = "No user ID has been provided"
+	NoUserIDProvided               = "No user ID has been provided"
 )
 
 type AppSettings struct {

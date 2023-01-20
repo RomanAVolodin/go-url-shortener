@@ -6,7 +6,7 @@ import (
 )
 
 type Repository interface {
-	GetByID(id string) (entities.ShortUrl, bool)
-	GetByUserId(userId uuid.UUID) []entities.ShortUrl
-	Create(shortUrl entities.ShortUrl) (entities.ShortUrl, error)
+	GetByID(id string) (entities.ShortURL, bool)
+	GetByUserID(userID uuid.UUID) []entities.ShortURL
+	Create(shortURL entities.ShortURL) (entities.ShortURL, error)
 }

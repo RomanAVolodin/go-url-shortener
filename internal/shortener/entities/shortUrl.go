@@ -2,20 +2,20 @@ package entities
 
 import "github.com/google/uuid"
 
-type ShortUrl struct {
-	Id       string    `json:"id"`
+type ShortURL struct {
+	ID       string    `json:"id"`
 	Short    string    `json:"short_url"`
 	Original string    `json:"original_url"`
-	UserId   uuid.UUID `json:"user_id"`
+	UserID   uuid.UUID `json:"user_id"`
 }
 
-type ShortUrlResponseDto struct {
+type ShortURLResponseDto struct {
 	Short    string `json:"short_url"`
 	Original string `json:"original_url"`
 }
 
-func (item *ShortUrl) ToResponseDto() ShortUrlResponseDto {
-	return ShortUrlResponseDto{
+func (item *ShortURL) ToResponseDto() ShortURLResponseDto {
+	return ShortURLResponseDto{
 		Short:    item.Short,
 		Original: item.Original,
 	}

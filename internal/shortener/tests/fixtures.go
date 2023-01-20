@@ -8,21 +8,14 @@ import (
 	"github.com/lithammer/shortuuid"
 )
 
-var ShortUrlIDFixture = shortuuid.New()
-var UserIdFixture = uuid.New()
+var ShortURLIDFixture = shortuuid.New()
+var UserIDFixture = uuid.New()
 
-var ShortUrlFixture = entities.ShortUrl{
-	Id:       ShortUrlIDFixture,
-	Short:    utils.GenerateResultURL(ShortUrlIDFixture),
+var ShortURLFixture = entities.ShortURL{
+	ID:       ShortURLIDFixture,
+	Short:    utils.GenerateResultURL(ShortURLIDFixture),
 	Original: "https://ya.ru",
-	UserId:   UserIdFixture,
+	UserID:   UserIDFixture,
 }
 
-var ShortUrlFixtureSecond = entities.ShortUrl{
-	Id:       ShortUrlIDFixture,
-	Short:    utils.GenerateResultURL(ShortUrlIDFixture),
-	Original: "https://mail.ru",
-	UserId:   UserIdFixture,
-}
-
-var JsonStorageWithOneElement, _ = json.Marshal([]entities.ShortUrlResponseDto{ShortUrlFixture.ToResponseDto()})
+var JSONStorageWithOneElement, _ = json.Marshal([]entities.ShortURLResponseDto{ShortURLFixture.ToResponseDto()})

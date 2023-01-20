@@ -7,33 +7,33 @@ import (
 )
 
 type InMemoryRepository struct {
-	Storage map[string]entities.ShortUrl
+	Storage map[string]entities.ShortURL
 }
 
 var lock = sync.RWMutex{}
 
-func (repo *InMemoryRepository) GetByID(id string) (entities.ShortUrl, bool) {
+func (repo *InMemoryRepository) GetByID(id string) (entities.ShortURL, bool) {
 	lock.RLock()
 	result, exist := repo.Storage[id]
 	lock.RUnlock()
 	return result, exist
 }
 
-func (repo *InMemoryRepository) GetByUserId(userId uuid.UUID) []entities.ShortUrl {
-	result := make([]entities.ShortUrl, 0, 8)
+func (repo *InMemoryRepository) GetByUserID(userID uuid.UUID) []entities.ShortURL {
+	result := make([]entities.ShortURL, 0, 8)
 	lock.RLock()
-	for _, shortUrl := range repo.Storage {
-		if shortUrl.UserId == userId {
-			result = append(result, shortUrl)
+	for _, shortURL := range repo.Storage {
+		if shortURL.UserID == userID {
+			result = append(result, shortURL)
 		}
 	}
 	lock.RUnlock()
 	return result
 }
 
-func (repo *InMemoryRepository) Create(shortUrl entities.ShortUrl) (entities.ShortUrl, error) {
+func (repo *InMemoryRepository) Create(shortURL entities.ShortURL) (entities.ShortURL, error) {
 	lock.Lock()
-	repo.Storage[shortUrl.Id] = shortUrl
+	repo.Storage[shortURL.ID] = shortURL
 	lock.Unlock()
-	return shortUrl, nil
+	return shortURL, nil
 }

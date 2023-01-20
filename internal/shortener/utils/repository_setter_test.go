@@ -26,12 +26,12 @@ func TestSetRepositories(t *testing.T) {
 		{
 			name:     "Check if in memory repo",
 			filepath: "",
-			want:     &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortUrl)},
+			want:     &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortURL)},
 		},
 		{
 			name:     "Check if file repo",
 			filepath: "test.json",
-			want:     &repositories.FileRepository{Storage: make(map[string]entities.ShortUrl), FilePath: "test.json"},
+			want:     &repositories.FileRepository{Storage: make(map[string]entities.ShortURL), FilePath: "test.json"},
 		},
 	}
 	for _, tt := range tests {

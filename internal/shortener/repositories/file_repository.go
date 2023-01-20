@@ -10,45 +10,45 @@ import (
 )
 
 type FileRepository struct {
-	Storage  map[string]entities.ShortUrl
+	Storage  map[string]entities.ShortURL
 	FilePath string
 }
 
-func (repo *FileRepository) GetByID(id string) (entities.ShortUrl, bool) {
+func (repo *FileRepository) GetByID(id string) (entities.ShortURL, bool) {
 	lock.RLock()
 	result, exist := repo.Storage[id]
 	lock.RUnlock()
 	return result, exist
 }
 
-func (repo *FileRepository) GetByUserId(userId uuid.UUID) []entities.ShortUrl {
-	result := make([]entities.ShortUrl, 0, 8)
+func (repo *FileRepository) GetByUserID(userID uuid.UUID) []entities.ShortURL {
+	result := make([]entities.ShortURL, 0, 8)
 	lock.RLock()
-	for _, shortUrl := range repo.Storage {
-		if shortUrl.UserId == userId {
-			result = append(result, shortUrl)
+	for _, shortURL := range repo.Storage {
+		if shortURL.UserID == userID {
+			result = append(result, shortURL)
 		}
 	}
 	lock.RUnlock()
 	return result
 }
 
-func (repo *FileRepository) Create(shortUrl entities.ShortUrl) (entities.ShortUrl, error) {
+func (repo *FileRepository) Create(shortURL entities.ShortURL) (entities.ShortURL, error) {
 	lock.Lock()
-	repo.Storage[shortUrl.Id] = shortUrl
+	repo.Storage[shortURL.ID] = shortURL
 	lock.Unlock()
 
 	file, err := repo.openStorageFile()
 	if err != nil {
-		return entities.ShortUrl{}, err
+		return entities.ShortURL{}, err
 	}
 	defer file.Close()
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", " ")
 	if err := encoder.Encode(&repo.Storage); err != nil {
-		return entities.ShortUrl{}, err
+		return entities.ShortURL{}, err
 	}
-	return shortUrl, nil
+	return shortURL, nil
 }
 
 func (repo *FileRepository) Restore() error {

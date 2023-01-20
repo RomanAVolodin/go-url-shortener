@@ -42,7 +42,7 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 			requestType: http.MethodPost,
 			requestBody: "https://ya.ru",
 			repo: &repositories.FileRepository{
-				Storage:  make(map[string]entities.ShortUrl),
+				Storage:  make(map[string]entities.ShortURL),
 				FilePath: "test.json",
 			},
 			wantedResult: wanted{
@@ -52,16 +52,16 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 		},
 		{
 			name:        "URL link should be returned",
-			requestURL:  "/" + tLoc.ShortUrlFixture.Id,
+			requestURL:  "/" + tLoc.ShortURLFixture.ID,
 			requestType: http.MethodGet,
-			requestBody: tLoc.ShortUrlFixture.Original,
+			requestBody: tLoc.ShortURLFixture.Original,
 			repo: &repositories.FileRepository{
-				Storage:  map[string]entities.ShortUrl{tLoc.ShortUrlFixture.Id: tLoc.ShortUrlFixture},
+				Storage:  map[string]entities.ShortURL{tLoc.ShortURLFixture.ID: tLoc.ShortURLFixture},
 				FilePath: "test.json",
 			},
 			wantedResult: wanted{
 				code:           http.StatusTemporaryRedirect,
-				locationHeader: tLoc.ShortUrlFixture.Original,
+				locationHeader: tLoc.ShortURLFixture.Original,
 			},
 		},
 		{
@@ -70,7 +70,7 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 			requestType: http.MethodGet,
 			requestBody: "https://ya.ru",
 			repo: &repositories.FileRepository{
-				Storage:  map[string]entities.ShortUrl{tLoc.ShortUrlFixture.Id: tLoc.ShortUrlFixture},
+				Storage:  map[string]entities.ShortURL{tLoc.ShortURLFixture.ID: tLoc.ShortURLFixture},
 				FilePath: "test.json",
 			},
 			wantedResult: wanted{
@@ -84,7 +84,7 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 			requestURL:  "/api/shorten",
 			requestBody: "{\"url\": \"https://mail.ru\"}",
 			repo: &repositories.FileRepository{
-				Storage:  make(map[string]entities.ShortUrl),
+				Storage:  make(map[string]entities.ShortURL),
 				FilePath: "test.json",
 			},
 			wantedResult: wanted{
@@ -97,7 +97,7 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 			requestType: http.MethodPost,
 			requestURL:  "/api/shorten",
 			repo: &repositories.FileRepository{
-				Storage:  make(map[string]entities.ShortUrl),
+				Storage:  make(map[string]entities.ShortURL),
 				FilePath: "test.json",
 			},
 			wantedResult: wanted{
@@ -111,7 +111,7 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 			requestURL:  "/api/shorten",
 			requestBody: "{\"wrongfield\": \"https://mail.ru\"}",
 			repo: &repositories.FileRepository{
-				Storage:  make(map[string]entities.ShortUrl),
+				Storage:  make(map[string]entities.ShortURL),
 				FilePath: "test.json",
 			},
 			wantedResult: wanted{
