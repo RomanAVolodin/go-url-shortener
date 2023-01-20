@@ -14,12 +14,14 @@ const (
 	BadInputData                   = "Incorrect request body data"
 	UnknownError                   = "Something bad's happened"
 	NoURLFoundByID                 = "No url found by id"
+	NoUserIDProvided               = "No user ID has been provided"
 )
 
 type AppSettings struct {
 	ServerAddress   string `env:"SERVER_ADDRESS"`
 	BaseURL         string `env:"BASE_URL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
+	SecretAuthKey   string `env:"AUTH_SECRET_KEY"   default:"super_secret"`
 }
 
 var Settings AppSettings
