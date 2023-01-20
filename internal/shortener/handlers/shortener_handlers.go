@@ -41,13 +41,13 @@ func (h *ShortenerHandler) CreateJSONShortURLHandler(
 		return
 	}
 
-	shortUrl, err := h.saveToRepository(createDTO.URL, userID)
+	shortURL, err := h.saveToRepository(createDTO.URL, userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	responseDTO := ShortenerResponseDTO{Result: shortUrl.Short}
+	responseDTO := ShortenerResponseDTO{Result: shortURL.Short}
 	jsonResponse, err := json.Marshal(responseDTO)
 	if err != nil {
 		http.Error(w, config.UnknownError, http.StatusBadRequest)
@@ -74,13 +74,13 @@ func (h *ShortenerHandler) CreateShortURLHandler(
 		return
 	}
 
-	shortUrl, err := h.saveToRepository(string(urlToEncode), userID)
+	shortURL, err := h.saveToRepository(string(urlToEncode), userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	_, err = w.Write([]byte(shortUrl.Short))
+	_, err = w.Write([]byte(shortURL.Short))
 	if err != nil {
 		http.Error(w, config.UnknownError, http.StatusInternalServerError)
 		return
