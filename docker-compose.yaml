@@ -1,0 +1,10 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:13.3
+    environment:
+      POSTGRES_DB: "shortener"
+      POSTGRES_USER: "shortener"
+      POSTGRES_PASSWORD: "secret"
+    ports:
+      - "5432:5432"

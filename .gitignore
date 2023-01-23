@@ -24,3 +24,5 @@ vendor/
 storages
 coverage*
 storage.json*
+cmd/shortener/shortener
+cmd/shortener/shortenertest
