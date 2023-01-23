@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
@@ -8,9 +10,11 @@ import (
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/lithammer/shortuuid"
 	"io"
 	"net/http"
+	"time"
 )
 
 type ShortenerCreateDTO struct {
@@ -129,6 +133,26 @@ func (h *ShortenerHandler) GetUsersRecordsHandler(
 		http.Error(w, config.UnknownError, http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *ShortenerHandler) PingDatabase(w http.ResponseWriter, r *http.Request) {
+	db, err := sql.Open("pgx", config.Settings.DatabaseDSN)
+	if err != nil {
+		http.Error(w, config.NoConnectionToDatabase, http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	if err = db.PingContext(ctx); err != nil {
+		http.Error(w, config.NoConnectionToDatabase, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *ShortenerHandler) saveToRepository(urlToEncode string, userID uuid.UUID) (entities.ShortURL, error) {

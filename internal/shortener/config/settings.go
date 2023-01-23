@@ -15,6 +15,7 @@ const (
 	UnknownError                   = "Something bad's happened"
 	NoURLFoundByID                 = "No url found by id"
 	NoUserIDProvided               = "No user ID has been provided"
+	NoConnectionToDatabase         = "Error while connecting to database"
 )
 
 type AppSettings struct {
@@ -22,6 +23,7 @@ type AppSettings struct {
 	BaseURL         string `env:"BASE_URL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	SecretAuthKey   string `env:"AUTH_SECRET_KEY"   default:"super_secret"`
+	DatabaseDSN     string `env:"DATABASE_DSN"      default:"postgres://shortener:secret@localhost:5432/shortener"`
 }
 
 var Settings AppSettings
@@ -35,6 +37,7 @@ func init() {
 	flagSet.StringVar(&Settings.ServerAddress, "a", "localhost:8080", "Server address with port")
 	flagSet.StringVar(&Settings.BaseURL, "b", "http://localhost:8080", "Full featured base url")
 	flagSet.StringVar(&Settings.FileStoragePath, "f", "", "File storage path")
+	flagSet.StringVar(&Settings.DatabaseDSN, "d", "", "Database DSN url")
 	flagSet.Parse(os.Args[1:])
 
 	err := env.Parse(&Settings)
