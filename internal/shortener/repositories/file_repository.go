@@ -1,46 +1,55 @@
 package repositories
 
 import (
+	"context"
 	"encoding/json"
-	"github.com/lithammer/shortuuid"
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
+	"github.com/google/uuid"
 	"io"
 	"log"
 	"os"
 )
 
 type FileRepository struct {
-	Storage  map[string]string
+	Storage  map[string]entities.ShortURL
 	FilePath string
 }
 
-func (repo *FileRepository) GetByID(id string) (string, bool) {
+func (repo *FileRepository) GetByID(ctx context.Context, id string) (entities.ShortURL, bool) {
 	lock.RLock()
 	result, exist := repo.Storage[id]
 	lock.RUnlock()
 	return result, exist
 }
 
-func (repo *FileRepository) CreateSave(url string) (string, error) {
-	shortURL := shortuuid.New()
-	return repo.Save(shortURL, url)
+func (repo *FileRepository) GetByUserID(ctx context.Context, userID uuid.UUID) []entities.ShortURL {
+	result := make([]entities.ShortURL, 0, 8)
+	lock.RLock()
+	for _, shortURL := range repo.Storage {
+		if shortURL.UserID == userID {
+			result = append(result, shortURL)
+		}
+	}
+	lock.RUnlock()
+	return result
 }
 
-func (repo *FileRepository) Save(key, value string) (string, error) {
+func (repo *FileRepository) Create(ctx context.Context, shortURL entities.ShortURL) (entities.ShortURL, error) {
 	lock.Lock()
-	repo.Storage[key] = value
+	repo.Storage[shortURL.ID] = shortURL
 	lock.Unlock()
 
 	file, err := repo.openStorageFile()
 	if err != nil {
-		return "", err
+		return entities.ShortURL{}, err
 	}
 	defer file.Close()
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", " ")
 	if err := encoder.Encode(&repo.Storage); err != nil {
-		return "", err
+		return entities.ShortURL{}, err
 	}
-	return key, nil
+	return shortURL, nil
 }
 
 func (repo *FileRepository) Restore() error {
