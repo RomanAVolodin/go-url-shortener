@@ -1,6 +1,8 @@
 package entities
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+)
 
 type ShortURL struct {
 	ID       string    `json:"id"`

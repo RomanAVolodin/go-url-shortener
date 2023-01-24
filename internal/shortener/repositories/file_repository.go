@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
 	"github.com/google/uuid"
@@ -14,14 +15,14 @@ type FileRepository struct {
 	FilePath string
 }
 
-func (repo *FileRepository) GetByID(id string) (entities.ShortURL, bool) {
+func (repo *FileRepository) GetByID(ctx context.Context, id string) (entities.ShortURL, bool) {
 	lock.RLock()
 	result, exist := repo.Storage[id]
 	lock.RUnlock()
 	return result, exist
 }
 
-func (repo *FileRepository) GetByUserID(userID uuid.UUID) []entities.ShortURL {
+func (repo *FileRepository) GetByUserID(ctx context.Context, userID uuid.UUID) []entities.ShortURL {
 	result := make([]entities.ShortURL, 0, 8)
 	lock.RLock()
 	for _, shortURL := range repo.Storage {
@@ -33,7 +34,7 @@ func (repo *FileRepository) GetByUserID(userID uuid.UUID) []entities.ShortURL {
 	return result
 }
 
-func (repo *FileRepository) Create(shortURL entities.ShortURL) (entities.ShortURL, error) {
+func (repo *FileRepository) Create(ctx context.Context, shortURL entities.ShortURL) (entities.ShortURL, error) {
 	lock.Lock()
 	repo.Storage[shortURL.ID] = shortURL
 	lock.Unlock()

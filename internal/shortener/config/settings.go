@@ -23,7 +23,7 @@ type AppSettings struct {
 	BaseURL         string `env:"BASE_URL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	SecretAuthKey   string `env:"AUTH_SECRET_KEY"   default:"super_secret"`
-	DatabaseDSN     string `env:"DATABASE_DSN"      default:"postgres://shortener:secret@localhost:5432/shortener"`
+	DatabaseDSN     string `env:"DATABASE_DSN"`
 }
 
 var Settings AppSettings

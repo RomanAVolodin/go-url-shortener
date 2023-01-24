@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"context"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
 	"github.com/google/uuid"
 	"sync"
@@ -12,14 +13,14 @@ type InMemoryRepository struct {
 
 var lock = sync.RWMutex{}
 
-func (repo *InMemoryRepository) GetByID(id string) (entities.ShortURL, bool) {
+func (repo *InMemoryRepository) GetByID(ctx context.Context, id string) (entities.ShortURL, bool) {
 	lock.RLock()
 	result, exist := repo.Storage[id]
 	lock.RUnlock()
 	return result, exist
 }
 
-func (repo *InMemoryRepository) GetByUserID(userID uuid.UUID) []entities.ShortURL {
+func (repo *InMemoryRepository) GetByUserID(ctx context.Context, userID uuid.UUID) []entities.ShortURL {
 	result := make([]entities.ShortURL, 0, 8)
 	lock.RLock()
 	for _, shortURL := range repo.Storage {
@@ -31,7 +32,7 @@ func (repo *InMemoryRepository) GetByUserID(userID uuid.UUID) []entities.ShortUR
 	return result
 }
 
-func (repo *InMemoryRepository) Create(shortURL entities.ShortURL) (entities.ShortURL, error) {
+func (repo *InMemoryRepository) Create(ctx context.Context, shortURL entities.ShortURL) (entities.ShortURL, error) {
 	lock.Lock()
 	repo.Storage[shortURL.ID] = shortURL
 	lock.Unlock()

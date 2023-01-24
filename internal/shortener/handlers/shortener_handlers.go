@@ -45,7 +45,7 @@ func (h *ShortenerHandler) CreateJSONShortURLHandler(
 		return
 	}
 
-	shortURL, err := h.saveToRepository(createDTO.URL, userID)
+	shortURL, err := h.saveToRepository(createDTO.URL, userID, r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -78,7 +78,7 @@ func (h *ShortenerHandler) CreateShortURLHandler(
 		return
 	}
 
-	shortURL, err := h.saveToRepository(string(urlToEncode), userID)
+	shortURL, err := h.saveToRepository(string(urlToEncode), userID, r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -96,7 +96,7 @@ func (h *ShortenerHandler) RetrieveShortURLHandler(
 	r *http.Request,
 ) {
 	urlID := chi.URLParam(r, "id")
-	if urlItem, exist := h.Repo.GetByID(urlID); exist {
+	if urlItem, exist := h.Repo.GetByID(r.Context(), urlID); exist {
 		w.Header().Set("Location", urlItem.Original)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 		return
@@ -114,7 +114,7 @@ func (h *ShortenerHandler) GetUsersRecordsHandler(
 		return
 	}
 
-	records := h.Repo.GetByUserID(userID)
+	records := h.Repo.GetByUserID(r.Context(), userID)
 	if len(records) == 0 {
 		w.WriteHeader(http.StatusNoContent)
 		return
@@ -143,7 +143,7 @@ func (h *ShortenerHandler) PingDatabase(w http.ResponseWriter, r *http.Request) 
 	}
 	defer db.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
 	defer cancel()
 
 	if err = db.PingContext(ctx); err != nil {
@@ -155,7 +155,11 @@ func (h *ShortenerHandler) PingDatabase(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *ShortenerHandler) saveToRepository(urlToEncode string, userID uuid.UUID) (entities.ShortURL, error) {
+func (h *ShortenerHandler) saveToRepository(
+	urlToEncode string,
+	userID uuid.UUID,
+	ctx context.Context,
+) (entities.ShortURL, error) {
 	id := shortuuid.New()
 	shortURL := entities.ShortURL{
 		ID:       id,
@@ -163,7 +167,7 @@ func (h *ShortenerHandler) saveToRepository(urlToEncode string, userID uuid.UUID
 		Original: urlToEncode,
 		UserID:   userID,
 	}
-	return h.Repo.Create(shortURL)
+	return h.Repo.Create(ctx, shortURL)
 }
 
 func (h *ShortenerHandler) readBody(w http.ResponseWriter, r *http.Request) (body []byte, doneWithError bool) {
