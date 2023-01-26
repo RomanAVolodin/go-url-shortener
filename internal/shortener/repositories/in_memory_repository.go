@@ -38,3 +38,15 @@ func (repo *InMemoryRepository) Create(ctx context.Context, shortURL entities.Sh
 	lock.Unlock()
 	return shortURL, nil
 }
+
+func (repo *InMemoryRepository) CreateMultiple(
+	ctx context.Context,
+	urls []entities.ShortURL,
+) ([]entities.ShortURL, error) {
+	lock.Lock()
+	for _, url := range urls {
+		repo.Storage[url.ID] = url
+	}
+	lock.Unlock()
+	return urls, nil
+}

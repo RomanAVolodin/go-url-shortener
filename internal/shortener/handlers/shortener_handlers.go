@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/middlewares"
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -17,14 +17,6 @@ import (
 	"time"
 )
 
-type ShortenerCreateDTO struct {
-	URL string `json:"url"`
-}
-
-type ShortenerResponseDTO struct {
-	Result string `json:"result"`
-}
-
 func (h *ShortenerHandler) CreateJSONShortURLHandler(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -33,7 +25,7 @@ func (h *ShortenerHandler) CreateJSONShortURLHandler(
 	if doneWithError {
 		return
 	}
-	var createDTO ShortenerCreateDTO
+	var createDTO entities.ShortenerSimpleCreateDTO
 	if err := json.Unmarshal(requestBody, &createDTO); err != nil || createDTO.URL == "" {
 		http.Error(w, config.BadInputData, http.StatusUnprocessableEntity)
 		return
@@ -51,8 +43,46 @@ func (h *ShortenerHandler) CreateJSONShortURLHandler(
 		return
 	}
 
-	responseDTO := ShortenerResponseDTO{Result: shortURL.Short}
+	responseDTO := entities.ShortenerSimpleResponseDTO{Result: shortURL.Short}
 	jsonResponse, err := json.Marshal(responseDTO)
+	if err != nil {
+		http.Error(w, config.UnknownError, http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	w.Write(jsonResponse)
+}
+
+func (h *ShortenerHandler) CreateMultipleShortURLHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	requestBody, doneWithError := h.readBody(w, r)
+	if doneWithError {
+		return
+	}
+	var incomingDTOs []entities.ShortURLResponseWithCorrelationCreateDto
+	if err := json.Unmarshal(requestBody, &incomingDTOs); err != nil {
+		http.Error(w, config.BadInputData, http.StatusUnprocessableEntity)
+		return
+	}
+	userID, err := middlewares.GetUserIDFromCookie(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	items, err := h.saveMultipleToRepository(incomingDTOs, userID, r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var result = make([]entities.ShortURLResponseWithCorrelationDto, 0, len(items))
+	for _, url := range items {
+		result = append(result, url.ToResponseWithCorrelationDto())
+	}
+	jsonResponse, err := json.Marshal(result)
 	if err != nil {
 		http.Error(w, config.UnknownError, http.StatusBadRequest)
 		return
@@ -136,23 +166,20 @@ func (h *ShortenerHandler) GetUsersRecordsHandler(
 }
 
 func (h *ShortenerHandler) PingDatabase(w http.ResponseWriter, r *http.Request) {
-	db, err := sql.Open("pgx", config.Settings.DatabaseDSN)
-	if err != nil {
-		http.Error(w, config.NoConnectionToDatabase, http.StatusInternalServerError)
+	if repo, ok := h.Repo.(*repositories.DatabaseRepository); ok {
+		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
+		defer cancel()
+
+		if err := repo.Storage.PingContext(ctx); err != nil {
+			http.Error(w, config.NoConnectionToDatabase, http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
 		return
 	}
-	defer db.Close()
-
-	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
-	defer cancel()
-
-	if err = db.PingContext(ctx); err != nil {
-		http.Error(w, config.NoConnectionToDatabase, http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	http.Error(w, config.NoConnectionToDatabase, http.StatusInternalServerError)
 }
 
 func (h *ShortenerHandler) saveToRepository(
@@ -168,6 +195,26 @@ func (h *ShortenerHandler) saveToRepository(
 		UserID:   userID,
 	}
 	return h.Repo.Create(ctx, shortURL)
+}
+
+func (h *ShortenerHandler) saveMultipleToRepository(
+	items []entities.ShortURLResponseWithCorrelationCreateDto,
+	userID uuid.UUID,
+	ctx context.Context,
+) ([]entities.ShortURL, error) {
+	urls := make([]entities.ShortURL, 0, len(items))
+	for _, item := range items {
+		id := shortuuid.New()
+		shortURL := entities.ShortURL{
+			ID:            id,
+			Short:         utils.GenerateResultURL(id),
+			Original:      item.Original,
+			CorrelationID: item.CorrelationID,
+			UserID:        userID,
+		}
+		urls = append(urls, shortURL)
+	}
+	return h.Repo.CreateMultiple(ctx, urls)
 }
 
 func (h *ShortenerHandler) readBody(w http.ResponseWriter, r *http.Request) (body []byte, doneWithError bool) {

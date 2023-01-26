@@ -30,6 +30,7 @@ func NewShortenerHandler(repo repo.Repository) *ShortenerHandler {
 	h.Get("/{id}", h.RetrieveShortURLHandler)
 	h.Post("/", h.CreateShortURLHandler)
 	h.Post("/api/shorten", h.CreateJSONShortURLHandler)
+	h.Post("/api/shorten/batch", h.CreateMultipleShortURLHandler)
 	h.Get("/api/user/urls", h.GetUsersRecordsHandler)
 	h.Get("/ping", h.PingDatabase)
 	h.MethodNotAllowed(func(writer http.ResponseWriter, request *http.Request) {

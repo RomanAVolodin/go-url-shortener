@@ -15,12 +15,8 @@ type DatabaseRepository struct {
 func (repo *DatabaseRepository) Create(ctx context.Context, shortURL entities.ShortURL) (entities.ShortURL, error) {
 	_, err := repo.Storage.ExecContext(
 		ctx,
-		"INSERT INTO short_urls (id, short_url, original_url, user_id) values ($1, $2, $3, $4)",
-		shortURL.ID, shortURL.Short, shortURL.Original, shortURL.UserID.String(),
-	)
-	log.Printf(
-		"Query to execute: INSERT INTO short_urls (id, short_url, original_url, user_id) values (%s, %s, %s, %s)",
-		shortURL.ID, shortURL.Short, shortURL.Original, shortURL.UserID,
+		"INSERT INTO short_urls (id, short_url, original_url, user_id, correlation_id) values ($1, $2, $3, $4, $5)",
+		shortURL.ID, shortURL.Short, shortURL.Original, shortURL.UserID.String(), shortURL.CorrelationID,
 	)
 	if err != nil {
 		return entities.ShortURL{}, err
@@ -28,14 +24,48 @@ func (repo *DatabaseRepository) Create(ctx context.Context, shortURL entities.Sh
 	return shortURL, nil
 }
 
+func (repo *DatabaseRepository) CreateMultiple(
+	ctx context.Context,
+	urls []entities.ShortURL,
+) ([]entities.ShortURL, error) {
+	tx, err := repo.Storage.Begin()
+	if err != nil {
+		return []entities.ShortURL{}, err
+	}
+	defer tx.Rollback()
+	stmt, err := tx.PrepareContext(
+		ctx,
+		"INSERT INTO short_urls (id, short_url, original_url, user_id, correlation_id) values ($1, $2, $3, $4, $5)",
+	)
+	if err != nil {
+		return []entities.ShortURL{}, err
+	}
+	defer stmt.Close()
+
+	for _, shortURL := range urls {
+		if _, err = stmt.ExecContext(
+			ctx,
+			shortURL.ID,
+			shortURL.Short,
+			shortURL.Original,
+			shortURL.UserID.String(),
+			shortURL.CorrelationID,
+		); err != nil {
+			return []entities.ShortURL{}, err
+		}
+	}
+
+	return urls, tx.Commit()
+}
+
 func (repo *DatabaseRepository) GetByID(ctx context.Context, id string) (entities.ShortURL, bool) {
 	var shortURL entities.ShortURL
 	row := repo.Storage.QueryRowContext(
 		ctx,
-		"SELECT id, short_url, original_url, user_id FROM short_urls WHERE id = $1",
-		id,
+		"SELECT id, short_url, original_url, user_id, correlation_id FROM short_urls WHERE id = @id",
+		sql.Named("id", id),
 	)
-	err := row.Scan(&shortURL.ID, &shortURL.Short, &shortURL.Original, &shortURL.UserID)
+	err := row.Scan(&shortURL.ID, &shortURL.Short, &shortURL.Original, &shortURL.UserID, &shortURL.CorrelationID)
 	if err != nil {
 		return entities.ShortURL{}, false
 	}
@@ -47,7 +77,7 @@ func (repo *DatabaseRepository) GetByUserID(ctx context.Context, userID uuid.UUI
 
 	rows, err := repo.Storage.QueryContext(
 		ctx,
-		"SELECT id, short_url, original_url, user_id from short_urls WHERE user_id = $1",
+		"SELECT id, short_url, original_url, user_id, correlation_id FROM short_urls WHERE user_id = $1",
 		userID.String(),
 	)
 	if err != nil {
@@ -57,7 +87,7 @@ func (repo *DatabaseRepository) GetByUserID(ctx context.Context, userID uuid.UUI
 
 	for rows.Next() {
 		var shortURL entities.ShortURL
-		err = rows.Scan(&shortURL.ID, &shortURL.Short, &shortURL.Original, &shortURL.UserID)
+		err = rows.Scan(&shortURL.ID, &shortURL.Short, &shortURL.Original, &shortURL.UserID, &shortURL.CorrelationID)
 		if err != nil {
 			log.Fatal(err)
 		}

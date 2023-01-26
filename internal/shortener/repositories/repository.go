@@ -10,4 +10,5 @@ type Repository interface {
 	GetByID(ctx context.Context, id string) (entities.ShortURL, bool)
 	GetByUserID(ctx context.Context, userID uuid.UUID) []entities.ShortURL
 	Create(ctx context.Context, shortURL entities.ShortURL) (entities.ShortURL, error)
+	CreateMultiple(ctx context.Context, urls []entities.ShortURL) ([]entities.ShortURL, error)
 }

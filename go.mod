@@ -5,6 +5,7 @@ go 1.19
 require github.com/lithammer/shortuuid v3.0.0+incompatible
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.0 // indirect
 	github.com/caarlos0/env/v6 v6.10.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-chi/chi/v5 v5.0.8 // indirect

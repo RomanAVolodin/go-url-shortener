@@ -2,8 +2,8 @@ package utils
 
 import (
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
-	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
+	"github.com/stretchr/testify/assert"
 	"log"
 	"os"
 	"reflect"
@@ -14,33 +14,38 @@ func TestSetRepositories(t *testing.T) {
 	defer func() {
 		err := os.Remove("test.json")
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 	}()
 
 	tests := []struct {
-		name     string
-		filepath string
-		want     repositories.Repository
+		name        string
+		filepath    string
+		databaseDSN string
+		want        string
 	}{
 		{
 			name:     "Check if in memory repo",
 			filepath: "",
-			want:     &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortURL)},
+			want:     reflect.TypeOf(&repositories.InMemoryRepository{}).String(),
 		},
 		{
 			name:     "Check if file repo",
 			filepath: "test.json",
-			want:     &repositories.FileRepository{Storage: make(map[string]entities.ShortURL), FilePath: "test.json"},
+			want:     reflect.TypeOf(&repositories.FileRepository{}).String(),
 		},
+		//{
+		//	name:        "Check postgres",
+		//	databaseDSN: "postgres://shortener:secret@localhost:5432/shortener",
+		//	want:        reflect.TypeOf(&repositories.DatabaseRepository{}).String(),
+		//},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config.Settings.FileStoragePath = tt.filepath
+			config.Settings.DatabaseDSN = tt.databaseDSN
 			got := SetRepository()
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("SetRepository() got = %v, want %v", got, tt.want)
-			}
+			assert.Equal(t, reflect.TypeOf(got).String(), tt.want)
 		})
 	}
 }

@@ -3,7 +3,9 @@ package handlers
 import (
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/middlewares"
@@ -148,6 +150,26 @@ func TestShortURLHandler(t *testing.T) {
 			wantedResult: wanted{
 				code:          http.StatusUnprocessableEntity,
 				exactResponse: config.BadInputData,
+			},
+		},
+		{
+			name:        "Ping database should return error as database does not exist",
+			requestType: http.MethodGet,
+			requestURL:  "/ping",
+			repo:        &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortURL)},
+			wantedResult: wanted{
+				code: http.StatusInternalServerError,
+			},
+		},
+		{
+			name:        "Multiple JSON URL links should be generated",
+			requestType: http.MethodPost,
+			requestURL:  "/api/shorten/batch",
+			requestBody: "[{\"correlation_id\": \"mail\",\"original_url\": \"https://mail.ru\"}]",
+			repo:        &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortURL)},
+			wantedResult: wanted{
+				code:              http.StatusCreated,
+				responseStartWith: "[{",
 			},
 		},
 	}
@@ -353,6 +375,164 @@ func TestAuthCookies(t *testing.T) {
 			if tt.wantedResult.response != "" {
 				assert.Equal(t, tt.wantedResult.response, strings.Trim(string(resBody), "\n"))
 			}
+		})
+	}
+}
+
+func TestDatabaseRepository(t *testing.T) {
+	type wanted struct {
+		code               int
+		responseBodyPrefix string
+		header             string
+	}
+	tests := []struct {
+		name       string
+		urlString  string
+		bodyString string
+		method     string
+		expect     func(sqlmock.Sqlmock)
+		wanted     wanted
+	}{
+		{
+			name:       "Create short URL success",
+			urlString:  "/api/shorten",
+			bodyString: "{\"url\": \"https://mail.ru\"}",
+			method:     http.MethodPost,
+			expect: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec("INSERT INTO short_urls").
+					WillReturnResult(sqlmock.NewResult(1, 1))
+			},
+			wanted: wanted{code: http.StatusCreated, responseBodyPrefix: "{\"result\":\"http://"},
+		},
+		{
+			name:       "Create short URL should return error with wrong params",
+			urlString:  "/api/shorten",
+			bodyString: "{\"url\": \"https://mail.ru\"}",
+			method:     http.MethodPost,
+			expect: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec("INSERT INTO short_urls").
+					WillReturnError(errors.New("error while inserting"))
+			},
+			wanted: wanted{code: http.StatusInternalServerError},
+		},
+		{
+			name:      "Get short URL by id success",
+			urlString: "/some_id",
+			method:    http.MethodGet,
+			expect: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery("SELECT id, short_url, original_url, user_id, correlation_id FROM short_urls").
+					WillReturnRows(
+						sqlmock.NewRows([]string{"id", "short_url", "original_url", "user_id", "correlation_id"}).
+							AddRow(
+								tLoc.ShortURLFixture.ID,
+								tLoc.ShortURLFixture.Short,
+								tLoc.ShortURLFixture.Original,
+								tLoc.ShortURLFixture.UserID.String(),
+								tLoc.ShortURLFixture.CorrelationID,
+							),
+					)
+			},
+			wanted: wanted{
+				code:   http.StatusTemporaryRedirect,
+				header: tLoc.ShortURLFixture.Original,
+			},
+		},
+		{
+			name:      "Get short URL by id should return error",
+			urlString: "/some_id",
+			method:    http.MethodGet,
+			expect: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery("SELECT id, short_url, original_url, user_id, correlation_id FROM short_urls").
+					WillReturnError(errors.New("error while inserting"))
+			},
+			wanted: wanted{
+				code: http.StatusNotFound,
+			},
+		},
+		{
+			name:      "Get list by user id success",
+			urlString: "/api/user/urls",
+			method:    http.MethodGet,
+			expect: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery("SELECT id, short_url, original_url, user_id, correlation_id FROM short_urls").
+					WillReturnRows(
+						sqlmock.NewRows([]string{"id", "short_url", "original_url", "user_id", "correlation_id"}).
+							AddRow(
+								tLoc.ShortURLFixture.ID,
+								tLoc.ShortURLFixture.Short,
+								tLoc.ShortURLFixture.Original,
+								tLoc.ShortURLFixture.UserID.String(),
+								tLoc.ShortURLFixture.CorrelationID,
+							),
+					)
+			},
+			wanted: wanted{
+				code: http.StatusOK,
+			},
+		},
+		{
+			name:      "Ping database should return OK as database exists",
+			method:    http.MethodGet,
+			urlString: "/ping",
+			expect:    func(mock sqlmock.Sqlmock) {},
+			wanted: wanted{
+				code: http.StatusOK,
+			},
+		},
+		{
+			name:       "Create multiple short URL success",
+			urlString:  "/api/shorten/batch",
+			bodyString: "[{\"correlation_id\": \"mail\",\"original_url\": \"https://mail.ru\"}]",
+			method:     http.MethodPost,
+			expect: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectPrepare("INSERT INTO short_urls").WillBeClosed()
+				mock.ExpectExec("INSERT INTO short_urls").
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectCommit()
+			},
+			wanted: wanted{code: http.StatusCreated, responseBodyPrefix: "[{"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+			}
+			defer db.Close()
+
+			tt.expect(mock)
+
+			var request *http.Request
+			if tt.method != "" {
+				request = httptest.NewRequest(tt.method, tt.urlString, strings.NewReader(tt.bodyString))
+			} else {
+				request = httptest.NewRequest(tt.method, tt.urlString, nil)
+			}
+			request.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
+
+			repo := repositories.DatabaseRepository{Storage: db}
+
+			w := httptest.NewRecorder()
+			h := NewShortenerHandler(&repo)
+			h.ServeHTTP(w, request)
+			res := w.Result()
+			defer res.Body.Close()
+			resBody, err := io.ReadAll(res.Body)
+
+			assert.Equal(t, tt.wanted.code, res.StatusCode)
+			assert.Nil(t, err)
+
+			if tt.wanted.responseBodyPrefix != "" {
+				assert.True(
+					t,
+					strings.HasPrefix(strings.Trim(string(resBody), "\n"), tt.wanted.responseBodyPrefix),
+				)
+			}
+
+			assert.Equal(t, tt.wanted.header, res.Header.Get("Location"))
 		})
 	}
 }

@@ -52,6 +52,28 @@ func (repo *FileRepository) Create(ctx context.Context, shortURL entities.ShortU
 	return shortURL, nil
 }
 
+func (repo *FileRepository) CreateMultiple(
+	ctx context.Context,
+	urls []entities.ShortURL,
+) ([]entities.ShortURL, error) {
+	lock.Lock()
+	for _, url := range urls {
+		repo.Storage[url.ID] = url
+	}
+	lock.Unlock()
+	file, err := repo.openStorageFile()
+	if err != nil {
+		return []entities.ShortURL{}, err
+	}
+	defer file.Close()
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", " ")
+	if err := encoder.Encode(&repo.Storage); err != nil {
+		return []entities.ShortURL{}, err
+	}
+	return urls, nil
+}
+
 func (repo *FileRepository) Restore() error {
 	file, err := repo.openStorageFile()
 	if err != nil {

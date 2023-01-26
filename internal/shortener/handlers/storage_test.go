@@ -65,6 +65,18 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 			},
 		},
 		{
+			name:        "URLs list should be returned by user id",
+			requestURL:  "/api/user/urls",
+			requestType: http.MethodGet,
+			repo: &repositories.FileRepository{
+				Storage:  map[string]entities.ShortURL{tLoc.ShortURLFixture.ID: tLoc.ShortURLFixture},
+				FilePath: "test.json",
+			},
+			wantedResult: wanted{
+				code: http.StatusNoContent,
+			},
+		},
+		{
 			name:        "URL link should not be found with wrong id",
 			requestURL:  "/randomid",
 			requestType: http.MethodGet,
@@ -117,6 +129,20 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 			wantedResult: wanted{
 				code:          http.StatusUnprocessableEntity,
 				exactResponse: config.BadInputData,
+			},
+		},
+		{
+			name:        "Multiple JSON URL link should be generated",
+			requestType: http.MethodPost,
+			requestURL:  "/api/shorten/batch",
+			requestBody: "[{\"correlation_id\": \"mail\",\"original_url\": \"https://mail.ru\"}]",
+			repo: &repositories.FileRepository{
+				Storage:  make(map[string]entities.ShortURL),
+				FilePath: "test.json",
+			},
+			wantedResult: wanted{
+				code:              http.StatusCreated,
+				responseStartWith: "[{",
 			},
 		},
 	}

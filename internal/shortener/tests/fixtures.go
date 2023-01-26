@@ -12,10 +12,11 @@ var ShortURLIDFixture = shortuuid.New()
 var UserIDFixture = uuid.New()
 
 var ShortURLFixture = entities.ShortURL{
-	ID:       ShortURLIDFixture,
-	Short:    utils.GenerateResultURL(ShortURLIDFixture),
-	Original: "https://ya.ru",
-	UserID:   UserIDFixture,
+	ID:            ShortURLIDFixture,
+	Short:         utils.GenerateResultURL(ShortURLIDFixture),
+	Original:      "https://ya.ru",
+	UserID:        UserIDFixture,
+	CorrelationID: "correlation_id",
 }
 
 var JSONStorageWithOneElement, _ = json.Marshal([]entities.ShortURLResponseDto{ShortURLFixture.ToResponseDto()})

@@ -6,6 +6,7 @@ import (
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"log"
 	"time"
 )
@@ -20,6 +21,11 @@ func SetRepository() repositories.Repository {
 		// note, we haven't deffered db.Close() at the init function since the connection will close after init.
 		// you could close it at main or ommit it
 
+		db.SetMaxOpenConns(20)
+		db.SetMaxIdleConns(20)
+		db.SetConnMaxIdleTime(time.Second * 30)
+		db.SetConnMaxLifetime(time.Minute * 2)
+
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
 
@@ -32,6 +38,7 @@ func SetRepository() repositories.Repository {
 				id varchar(45) NOT NULL PRIMARY KEY, 
 				short_url varchar(150) NOT NULL, 
 				original_url varchar(255) NOT NULL, 
+				correlation_id varchar(255), 
 				user_id uuid NOT NULL
             )`,
 		)
