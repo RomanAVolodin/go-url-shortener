@@ -62,8 +62,8 @@ func (repo *DatabaseRepository) GetByID(ctx context.Context, id string) (entitie
 	var shortURL entities.ShortURL
 	row := repo.Storage.QueryRowContext(
 		ctx,
-		"SELECT id, short_url, original_url, user_id, correlation_id FROM short_urls WHERE id = @id",
-		sql.Named("id", id),
+		"SELECT id, short_url, original_url, user_id, correlation_id FROM short_urls WHERE id = $1",
+		id,
 	)
 	err := row.Scan(&shortURL.ID, &shortURL.Short, &shortURL.Original, &shortURL.UserID, &shortURL.CorrelationID)
 	if err != nil {
