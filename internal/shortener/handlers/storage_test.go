@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
+	tLoc "github.com/RomanAVolodin/go-url-shortener/internal/shortener/tests"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"log"
@@ -16,10 +18,6 @@ import (
 func TestFileStorageShortURLHandler(t *testing.T) {
 	defer func() {
 		err := os.RemoveAll("test.json")
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = os.RemoveAll("back_test.json")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -37,15 +35,16 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 		requestType  string
 		requestBody  string
 		repo         *repositories.FileRepository
-		backRepo     *repositories.FileRepository
 		wantedResult wanted
 	}{
 		{
 			name:        "URL link should be generated",
 			requestType: http.MethodPost,
 			requestBody: "https://ya.ru",
-			repo:        &repositories.FileRepository{Storage: make(map[string]string), FilePath: "test.json"},
-			backRepo:    &repositories.FileRepository{Storage: make(map[string]string), FilePath: "back_test.json"},
+			repo: &repositories.FileRepository{
+				Storage:  make(map[string]entities.ShortURL),
+				FilePath: "test.json",
+			},
 			wantedResult: wanted{
 				code:              http.StatusCreated,
 				responseStartWith: config.Settings.BaseURL,
@@ -53,14 +52,28 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 		},
 		{
 			name:        "URL link should be returned",
-			requestURL:  "/qwerty",
+			requestURL:  "/" + tLoc.ShortURLFixture.ID,
 			requestType: http.MethodGet,
-			requestBody: "https://ya.ru",
-			repo:        &repositories.FileRepository{Storage: map[string]string{"qwerty": "https://ya.ru"}, FilePath: "test.json"},
-			backRepo:    &repositories.FileRepository{Storage: make(map[string]string), FilePath: "back_test.json"},
+			requestBody: tLoc.ShortURLFixture.Original,
+			repo: &repositories.FileRepository{
+				Storage:  map[string]entities.ShortURL{tLoc.ShortURLFixture.ID: tLoc.ShortURLFixture},
+				FilePath: "test.json",
+			},
 			wantedResult: wanted{
 				code:           http.StatusTemporaryRedirect,
-				locationHeader: "https://ya.ru",
+				locationHeader: tLoc.ShortURLFixture.Original,
+			},
+		},
+		{
+			name:        "URLs list should be returned by user id",
+			requestURL:  "/api/user/urls",
+			requestType: http.MethodGet,
+			repo: &repositories.FileRepository{
+				Storage:  map[string]entities.ShortURL{tLoc.ShortURLFixture.ID: tLoc.ShortURLFixture},
+				FilePath: "test.json",
+			},
+			wantedResult: wanted{
+				code: http.StatusNoContent,
 			},
 		},
 		{
@@ -68,8 +81,10 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 			requestURL:  "/randomid",
 			requestType: http.MethodGet,
 			requestBody: "https://ya.ru",
-			repo:        &repositories.FileRepository{Storage: map[string]string{"qwerty": "https://ya.ru"}, FilePath: "test.json"},
-			backRepo:    &repositories.FileRepository{Storage: make(map[string]string), FilePath: "back_test.json"},
+			repo: &repositories.FileRepository{
+				Storage:  map[string]entities.ShortURL{tLoc.ShortURLFixture.ID: tLoc.ShortURLFixture},
+				FilePath: "test.json",
+			},
 			wantedResult: wanted{
 				code:          http.StatusNotFound,
 				exactResponse: config.NoURLFoundByID,
@@ -80,8 +95,10 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 			requestType: http.MethodPost,
 			requestURL:  "/api/shorten",
 			requestBody: "{\"url\": \"https://mail.ru\"}",
-			repo:        &repositories.FileRepository{Storage: make(map[string]string), FilePath: "test.json"},
-			backRepo:    &repositories.FileRepository{Storage: make(map[string]string), FilePath: "back_test.json"},
+			repo: &repositories.FileRepository{
+				Storage:  make(map[string]entities.ShortURL),
+				FilePath: "test.json",
+			},
 			wantedResult: wanted{
 				code:              http.StatusCreated,
 				responseStartWith: "{\"result\":\"http://",
@@ -91,8 +108,10 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 			name:        "JSON should return error with empty body",
 			requestType: http.MethodPost,
 			requestURL:  "/api/shorten",
-			repo:        &repositories.FileRepository{Storage: make(map[string]string), FilePath: "test.json"},
-			backRepo:    &repositories.FileRepository{Storage: make(map[string]string), FilePath: "back_test.json"},
+			repo: &repositories.FileRepository{
+				Storage:  make(map[string]entities.ShortURL),
+				FilePath: "test.json",
+			},
 			wantedResult: wanted{
 				code:          http.StatusBadRequest,
 				exactResponse: config.RequestBodyEmptyError,
@@ -103,18 +122,33 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 			requestType: http.MethodPost,
 			requestURL:  "/api/shorten",
 			requestBody: "{\"wrongfield\": \"https://mail.ru\"}",
-			repo:        &repositories.FileRepository{Storage: make(map[string]string), FilePath: "test.json"},
-			backRepo:    &repositories.FileRepository{Storage: make(map[string]string), FilePath: "back_test.json"},
+			repo: &repositories.FileRepository{
+				Storage:  make(map[string]entities.ShortURL),
+				FilePath: "test.json",
+			},
 			wantedResult: wanted{
 				code:          http.StatusUnprocessableEntity,
 				exactResponse: config.BadInputData,
+			},
+		},
+		{
+			name:        "Multiple JSON URL link should be generated",
+			requestType: http.MethodPost,
+			requestURL:  "/api/shorten/batch",
+			requestBody: "[{\"correlation_id\": \"mail\",\"original_url\": \"https://mail.ru\"}]",
+			repo: &repositories.FileRepository{
+				Storage:  make(map[string]entities.ShortURL),
+				FilePath: "test.json",
+			},
+			wantedResult: wanted{
+				code:              http.StatusCreated,
+				responseStartWith: "[{",
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_ = tt.repo.Restore()
-			_ = tt.backRepo.Restore()
 
 			url := "/"
 			if tt.requestURL != "" {
@@ -129,7 +163,7 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 			request.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
 
 			w := httptest.NewRecorder()
-			h := NewShortenerHandler(tt.repo, tt.backRepo)
+			h := NewShortenerHandler(tt.repo)
 			h.ServeHTTP(w, request)
 			res := w.Result()
 			defer res.Body.Close()

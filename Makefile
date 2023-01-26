@@ -5,3 +5,7 @@ test-coverage:
 
 run:
 	SERVER_ADDRESS=localhost:8080 BASE_URL=http://localhost:8080 go run cmd/shortener/main.go
+
+test-coverage-console:
+	go test ./...  -coverpkg=./... -coverprofile coverage.out
+	go tool cover -func coverage.out
