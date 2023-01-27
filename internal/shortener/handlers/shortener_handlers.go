@@ -40,6 +40,9 @@ func (h *ShortenerHandler) CreateJSONShortURLHandler(
 	}
 
 	shortURL, err := h.saveToRepository(createDTO.URL, userID, r.Context())
+
+	w.Header().Set("Content-Type", "application/json")
+
 	switch {
 	case err != nil && errors.Is(err, shortenerrors.ErrItemAlreadyExists):
 		w.WriteHeader(http.StatusConflict)
@@ -56,7 +59,6 @@ func (h *ShortenerHandler) CreateJSONShortURLHandler(
 		http.Error(w, config.UnknownError, http.StatusBadRequest)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonResponse)
 }
 
