@@ -9,8 +9,8 @@ import (
 )
 
 func main() {
-	repo, backRepo := utils.SetRepositories()
-	h := handlers.NewShortenerHandler(repo, backRepo)
+	repo := utils.SetRepository()
+	h := handlers.NewShortenerHandler(repo)
 	log.Printf("Server started at %s", config.Settings.ServerAddress)
 	log.Fatal(http.ListenAndServe(config.Settings.ServerAddress, h))
 }

@@ -1,5 +1,18 @@
 # go-musthave-shortener-tpl
-![Coverage](https://img.shields.io/badge/Coverage-85.5%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-71.9%25-brightgreen)
+
+### Run app 
+
+```bash
+go run cmd/shortener/main.go -a localhost:8080 -b http://localhost:8080 -f storage.json -d postgres://shortener:secret@localhost:5432/shortener
+```
+
+
+### Test increment 10
+
+```bash
+./cmd/shortener/shortenertest -test.v -test.run=^TestIteration10$ -binary-path=cmd/shortener/shortener -source-path=./ -database-dsn=postgres://shortener:secret@localhost:5432/shortener
+```
 
 Шаблон репозитория для практического трек "Веб-разработка на Go"
 
