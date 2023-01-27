@@ -37,7 +37,7 @@ func SetRepository() repositories.Repository {
 			`CREATE TABLE IF NOT EXISTS short_urls (
 				id varchar(45) NOT NULL PRIMARY KEY, 
 				short_url varchar(150) NOT NULL, 
-				original_url varchar(255) NOT NULL, 
+				original_url varchar(255) NOT NULL UNIQUE, 
 				correlation_id varchar(255), 
 				user_id uuid NOT NULL
             )`,

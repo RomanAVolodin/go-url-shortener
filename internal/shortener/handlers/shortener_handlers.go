@@ -3,10 +3,12 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/middlewares"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/shortenerrors"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -38,9 +40,14 @@ func (h *ShortenerHandler) CreateJSONShortURLHandler(
 	}
 
 	shortURL, err := h.saveToRepository(createDTO.URL, userID, r.Context())
-	if err != nil {
+	switch {
+	case err != nil && errors.Is(err, shortenerrors.ItemAlreadyExistsError):
+		w.WriteHeader(http.StatusConflict)
+	case err != nil:
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	case err == nil:
+		w.WriteHeader(http.StatusOK)
 	}
 
 	responseDTO := entities.ShortenerSimpleResponseDTO{Result: shortURL.Short}
@@ -50,7 +57,6 @@ func (h *ShortenerHandler) CreateJSONShortURLHandler(
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
 	w.Write(jsonResponse)
 }
 
@@ -100,7 +106,6 @@ func (h *ShortenerHandler) CreateShortURLHandler(
 	if doneWithError {
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
 
 	userID, err := middlewares.GetUserIDFromCookie(r)
 	if err != nil {
@@ -109,9 +114,14 @@ func (h *ShortenerHandler) CreateShortURLHandler(
 	}
 
 	shortURL, err := h.saveToRepository(string(urlToEncode), userID, r.Context())
-	if err != nil {
+	switch {
+	case err != nil && errors.Is(err, shortenerrors.ItemAlreadyExistsError):
+		w.WriteHeader(http.StatusConflict)
+	case err != nil:
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	case err == nil:
+		w.WriteHeader(http.StatusOK)
 	}
 
 	_, err = w.Write([]byte(shortURL.Short))
