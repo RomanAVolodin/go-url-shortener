@@ -41,13 +41,13 @@ func (h *ShortenerHandler) CreateJSONShortURLHandler(
 
 	shortURL, err := h.saveToRepository(createDTO.URL, userID, r.Context())
 	switch {
-	case err != nil && errors.Is(err, shortenerrors.ItemAlreadyExistsError):
+	case err != nil && errors.Is(err, shortenerrors.ErrItemAlreadyExists):
 		w.WriteHeader(http.StatusConflict)
 	case err != nil:
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	case err == nil:
-		w.WriteHeader(http.StatusOK)
+	default:
+		w.WriteHeader(http.StatusCreated)
 	}
 
 	responseDTO := entities.ShortenerSimpleResponseDTO{Result: shortURL.Short}
@@ -115,13 +115,13 @@ func (h *ShortenerHandler) CreateShortURLHandler(
 
 	shortURL, err := h.saveToRepository(string(urlToEncode), userID, r.Context())
 	switch {
-	case err != nil && errors.Is(err, shortenerrors.ItemAlreadyExistsError):
+	case err != nil && errors.Is(err, shortenerrors.ErrItemAlreadyExists):
 		w.WriteHeader(http.StatusConflict)
 	case err != nil:
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	case err == nil:
-		w.WriteHeader(http.StatusOK)
+	default:
+		w.WriteHeader(http.StatusCreated)
 	}
 
 	_, err = w.Write([]byte(shortURL.Short))

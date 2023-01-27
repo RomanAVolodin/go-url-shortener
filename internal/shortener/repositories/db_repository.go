@@ -41,7 +41,7 @@ func (repo *DatabaseRepository) Create(ctx context.Context, shortURL entities.Sh
 			if errExisted != nil {
 				return entities.ShortURL{}, errExisted
 			}
-			return existed, shortenerrors.ItemAlreadyExistsError
+			return existed, shortenerrors.ErrItemAlreadyExists
 		}
 		return entities.ShortURL{}, err
 	}
