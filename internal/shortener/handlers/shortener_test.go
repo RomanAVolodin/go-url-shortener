@@ -11,6 +11,8 @@ import (
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/middlewares"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
 	tLoc "github.com/RomanAVolodin/go-url-shortener/internal/shortener/tests"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
@@ -492,6 +494,28 @@ func TestDatabaseRepository(t *testing.T) {
 				mock.ExpectCommit()
 			},
 			wanted: wanted{code: http.StatusCreated, responseBodyPrefix: "[{"},
+		},
+		{
+			name:       "Create short URL that already exists should return it and status 409",
+			urlString:  "/api/shorten",
+			bodyString: "{\"url\": \"https://mail.ru\"}",
+			method:     http.MethodPost,
+			expect: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec("INSERT INTO short_urls").
+					WillReturnError(&pgconn.PgError{Code: pgerrcode.UniqueViolation})
+				mock.ExpectQuery("SELECT id, short_url, original_url, user_id, correlation_id FROM short_urls").
+					WillReturnRows(
+						sqlmock.NewRows([]string{"id", "short_url", "original_url", "user_id", "correlation_id"}).
+							AddRow(
+								tLoc.ShortURLFixture.ID,
+								tLoc.ShortURLFixture.Short,
+								tLoc.ShortURLFixture.Original,
+								tLoc.ShortURLFixture.UserID.String(),
+								tLoc.ShortURLFixture.CorrelationID,
+							),
+					)
+			},
+			wanted: wanted{code: http.StatusConflict},
 		},
 	}
 

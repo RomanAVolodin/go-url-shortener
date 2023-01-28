@@ -39,19 +39,13 @@ func (h *ShortenerHandler) CreateJSONShortURLHandler(
 		return
 	}
 
-	shortURL, err := h.saveToRepository(createDTO.URL, userID, r.Context())
-
-	w.Header().Set("Content-Type", "application/json")
-
-	switch {
-	case err != nil && errors.Is(err, shortenerrors.ErrItemAlreadyExists):
-		w.WriteHeader(http.StatusConflict)
-	case err != nil:
+	shortURL, statusCode, err := h.saveToRepository(createDTO.URL, userID, r.Context())
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	default:
-		w.WriteHeader(http.StatusCreated)
 	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
 
 	responseDTO := entities.ShortenerSimpleResponseDTO{Result: shortURL.Short}
 	jsonResponse, err := json.Marshal(responseDTO)
@@ -115,16 +109,12 @@ func (h *ShortenerHandler) CreateShortURLHandler(
 		return
 	}
 
-	shortURL, err := h.saveToRepository(string(urlToEncode), userID, r.Context())
-	switch {
-	case err != nil && errors.Is(err, shortenerrors.ErrItemAlreadyExists):
-		w.WriteHeader(http.StatusConflict)
-	case err != nil:
+	shortURL, statusCode, err := h.saveToRepository(string(urlToEncode), userID, r.Context())
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	default:
-		w.WriteHeader(http.StatusCreated)
 	}
+	w.WriteHeader(statusCode)
 
 	_, err = w.Write([]byte(shortURL.Short))
 	if err != nil {
@@ -198,7 +188,7 @@ func (h *ShortenerHandler) saveToRepository(
 	urlToEncode string,
 	userID uuid.UUID,
 	ctx context.Context,
-) (entities.ShortURL, error) {
+) (entities.ShortURL, int, error) {
 	id := shortuuid.New()
 	shortURL := entities.ShortURL{
 		ID:       id,
@@ -206,7 +196,18 @@ func (h *ShortenerHandler) saveToRepository(
 		Original: urlToEncode,
 		UserID:   userID,
 	}
-	return h.Repo.Create(ctx, shortURL)
+	url, err := h.Repo.Create(ctx, shortURL)
+
+	var statusCode int
+	switch {
+	case err != nil && errors.Is(err, shortenerrors.ErrItemAlreadyExists):
+		statusCode = http.StatusConflict
+	case err != nil:
+		return url, statusCode, err
+	default:
+		statusCode = http.StatusCreated
+	}
+	return url, statusCode, nil
 }
 
 func (h *ShortenerHandler) saveMultipleToRepository(
