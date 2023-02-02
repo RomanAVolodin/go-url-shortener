@@ -3,6 +3,7 @@ package utils
 import (
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
+	"github.com/stretchr/testify/assert"
 	"log"
 	"os"
 	"reflect"
@@ -13,43 +14,38 @@ func TestSetRepositories(t *testing.T) {
 	defer func() {
 		err := os.Remove("test.json")
 		if err != nil {
-			log.Fatal(err)
-		}
-		err = os.Remove("test.json_back")
-		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 	}()
 
 	tests := []struct {
-		name     string
-		filepath string
-		want     repositories.Repository
-		want1    repositories.Repository
+		name        string
+		filepath    string
+		databaseDSN string
+		want        string
 	}{
 		{
 			name:     "Check if in memory repo",
 			filepath: "",
-			want:     &repositories.InMemoryRepository{Storage: make(map[string]string)},
-			want1:    &repositories.InMemoryRepository{Storage: make(map[string]string)},
+			want:     reflect.TypeOf(&repositories.InMemoryRepository{}).String(),
 		},
 		{
 			name:     "Check if file repo",
 			filepath: "test.json",
-			want:     &repositories.FileRepository{Storage: make(map[string]string), FilePath: "test.json"},
-			want1:    &repositories.FileRepository{Storage: make(map[string]string), FilePath: "test.json_back"},
+			want:     reflect.TypeOf(&repositories.FileRepository{}).String(),
 		},
+		//{
+		//	name:        "Check postgres",
+		//	databaseDSN: "postgres://shortener:secret@localhost:5432/shortener",
+		//	want:        reflect.TypeOf(&repositories.DatabaseRepository{}).String(),
+		//},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config.Settings.FileStoragePath = tt.filepath
-			got, got1 := SetRepositories()
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("SetRepositories() got = %v, want %v", got, tt.want)
-			}
-			if !reflect.DeepEqual(got1, tt.want1) {
-				t.Errorf("SetRepositories() got1 = %v, want %v", got1, tt.want1)
-			}
+			config.Settings.DatabaseDSN = tt.databaseDSN
+			got := SetRepository()
+			assert.Equal(t, reflect.TypeOf(got).String(), tt.want)
 		})
 	}
 }
