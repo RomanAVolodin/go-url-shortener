@@ -39,7 +39,7 @@ func (h *ShortenerHandler) CreateJSONShortURLHandler(
 		return
 	}
 
-	shortURL, statusCode, err := h.saveToRepository(createDTO.URL, userID, r.Context())
+	shortURL, statusCode, err := h.saveToRepository(r.Context(), createDTO.URL, userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -75,7 +75,7 @@ func (h *ShortenerHandler) CreateMultipleShortURLHandler(
 		return
 	}
 
-	items, err := h.saveMultipleToRepository(incomingDTOs, userID, r.Context())
+	items, err := h.saveMultipleToRepository(r.Context(), incomingDTOs, userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -109,7 +109,7 @@ func (h *ShortenerHandler) CreateShortURLHandler(
 		return
 	}
 
-	shortURL, statusCode, err := h.saveToRepository(string(urlToEncode), userID, r.Context())
+	shortURL, statusCode, err := h.saveToRepository(r.Context(), string(urlToEncode), userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -128,9 +128,14 @@ func (h *ShortenerHandler) RetrieveShortURLHandler(
 	r *http.Request,
 ) {
 	urlID := chi.URLParam(r, "id")
-	if urlItem, exist := h.Repo.GetByID(r.Context(), urlID); exist {
+	urlItem, exist, err := h.Repo.GetByID(r.Context(), urlID)
+	if exist && err == nil {
 		w.Header().Set("Location", urlItem.Original)
 		w.WriteHeader(http.StatusTemporaryRedirect)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	http.Error(w, config.NoURLFoundByID, http.StatusNotFound)
@@ -146,7 +151,11 @@ func (h *ShortenerHandler) GetUsersRecordsHandler(
 		return
 	}
 
-	records := h.Repo.GetByUserID(r.Context(), userID)
+	records, err := h.Repo.GetByUserID(r.Context(), userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	if len(records) == 0 {
 		w.WriteHeader(http.StatusNoContent)
 		return
@@ -185,9 +194,9 @@ func (h *ShortenerHandler) PingDatabase(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *ShortenerHandler) saveToRepository(
+	ctx context.Context,
 	urlToEncode string,
 	userID uuid.UUID,
-	ctx context.Context,
 ) (entities.ShortURL, int, error) {
 	id := shortuuid.New()
 	shortURL := entities.ShortURL{
@@ -211,9 +220,9 @@ func (h *ShortenerHandler) saveToRepository(
 }
 
 func (h *ShortenerHandler) saveMultipleToRepository(
+	ctx context.Context,
 	items []entities.ShortURLResponseWithCorrelationCreateDto,
 	userID uuid.UUID,
-	ctx context.Context,
 ) ([]entities.ShortURL, error) {
 	urls := make([]entities.ShortURL, 0, len(items))
 	for _, item := range items {

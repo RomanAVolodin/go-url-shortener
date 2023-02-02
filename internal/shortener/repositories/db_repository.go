@@ -82,7 +82,7 @@ func (repo *DatabaseRepository) CreateMultiple(
 	return urls, tx.Commit()
 }
 
-func (repo *DatabaseRepository) GetByID(ctx context.Context, id string) (entities.ShortURL, bool) {
+func (repo *DatabaseRepository) GetByID(ctx context.Context, id string) (entities.ShortURL, bool, error) {
 	var shortURL entities.ShortURL
 	row := repo.Storage.QueryRowContext(
 		ctx,
@@ -91,12 +91,12 @@ func (repo *DatabaseRepository) GetByID(ctx context.Context, id string) (entitie
 	)
 	err := row.Scan(&shortURL.ID, &shortURL.Short, &shortURL.Original, &shortURL.UserID, &shortURL.CorrelationID)
 	if err != nil {
-		return entities.ShortURL{}, false
+		return entities.ShortURL{}, false, err
 	}
-	return shortURL, true
+	return shortURL, true, nil
 }
 
-func (repo *DatabaseRepository) GetByUserID(ctx context.Context, userID uuid.UUID) []entities.ShortURL {
+func (repo *DatabaseRepository) GetByUserID(ctx context.Context, userID uuid.UUID) ([]entities.ShortURL, error) {
 	shortURLs := make([]entities.ShortURL, 0, 16)
 
 	rows, err := repo.Storage.QueryContext(
@@ -105,7 +105,7 @@ func (repo *DatabaseRepository) GetByUserID(ctx context.Context, userID uuid.UUI
 		userID.String(),
 	)
 	if err != nil {
-		return shortURLs
+		return shortURLs, err
 	}
 	defer rows.Close()
 
@@ -121,8 +121,8 @@ func (repo *DatabaseRepository) GetByUserID(ctx context.Context, userID uuid.UUI
 
 	err = rows.Err()
 	if err != nil {
-		log.Printf("Error happened while fetching urls: %v", err)
+		return shortURLs, err
 	}
 
-	return shortURLs
+	return shortURLs, nil
 }

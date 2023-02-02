@@ -14,6 +14,7 @@
 # Binaries
 cmd/shortener/main
 cmd/shortener/shortener
+cmd/shortener/shortenertest
 
 # Dependency directories (remove the comment below to include it)
 vendor/
@@ -24,5 +25,3 @@ vendor/
 storages
 coverage*
 storage.json*
-cmd/shortener/shortener
-cmd/shortener/shortenertest

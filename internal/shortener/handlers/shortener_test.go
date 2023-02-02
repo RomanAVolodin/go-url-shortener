@@ -448,7 +448,7 @@ func TestDatabaseRepository(t *testing.T) {
 					WillReturnError(errors.New("error while inserting"))
 			},
 			wanted: wanted{
-				code: http.StatusNotFound,
+				code: http.StatusInternalServerError,
 			},
 		},
 		{

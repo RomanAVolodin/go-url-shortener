@@ -15,14 +15,14 @@ type FileRepository struct {
 	FilePath string
 }
 
-func (repo *FileRepository) GetByID(ctx context.Context, id string) (entities.ShortURL, bool) {
+func (repo *FileRepository) GetByID(ctx context.Context, id string) (entities.ShortURL, bool, error) {
 	lock.RLock()
 	result, exist := repo.Storage[id]
 	lock.RUnlock()
-	return result, exist
+	return result, exist, nil
 }
 
-func (repo *FileRepository) GetByUserID(ctx context.Context, userID uuid.UUID) []entities.ShortURL {
+func (repo *FileRepository) GetByUserID(ctx context.Context, userID uuid.UUID) ([]entities.ShortURL, error) {
 	result := make([]entities.ShortURL, 0, 8)
 	lock.RLock()
 	for _, shortURL := range repo.Storage {
@@ -31,7 +31,7 @@ func (repo *FileRepository) GetByUserID(ctx context.Context, userID uuid.UUID) [
 		}
 	}
 	lock.RUnlock()
-	return result
+	return result, nil
 }
 
 func (repo *FileRepository) Create(ctx context.Context, shortURL entities.ShortURL) (entities.ShortURL, error) {
