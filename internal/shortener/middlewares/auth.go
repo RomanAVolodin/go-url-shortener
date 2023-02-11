@@ -14,7 +14,10 @@ import (
 )
 
 const CookieName = "user-id"
-const UserIDKey = "id"
+
+type UserIdKey string
+
+const UserIDKey UserIdKey = "id"
 
 func AuthCookie(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

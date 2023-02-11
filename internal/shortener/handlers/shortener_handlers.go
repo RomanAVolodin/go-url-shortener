@@ -207,7 +207,6 @@ func (h *ShortenerHandler) DeleteRecordsHandler(
 	}
 
 	w.WriteHeader(http.StatusAccepted)
-	return
 }
 
 func (h *ShortenerHandler) deleteFromRepository(

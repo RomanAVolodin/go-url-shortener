@@ -144,13 +144,13 @@ func (repo *DatabaseRepository) GetByUserID(ctx context.Context, userID uuid.UUI
 }
 
 func (repo *DatabaseRepository) DeleteRecords(ctx context.Context, userID uuid.UUID, ids []string) error {
-	query, args, err := sqlx.In(
+	query, args, _ := sqlx.In(
 		"UPDATE short_urls SET is_active=false WHERE user_id = ? AND id IN (?)",
 		userID.String(),
 		ids,
 	)
 	query = sqlx.Rebind(sqlx.DOLLAR, query)
-	_, err = repo.Storage.ExecContext(
+	_, err := repo.Storage.ExecContext(
 		ctx,
 		query,
 		args...,
