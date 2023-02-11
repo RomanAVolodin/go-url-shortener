@@ -10,6 +10,7 @@ type ShortURL struct {
 	Original      string    `json:"original_url"`
 	CorrelationID string    `json:"correlation_id"`
 	UserID        uuid.UUID `json:"user_id"`
+	IsActive      bool      `json:"is_active"`
 }
 
 type ShortURLResponseDto struct {

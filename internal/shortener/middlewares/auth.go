@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -13,6 +14,10 @@ import (
 )
 
 const CookieName = "user-id"
+
+type UserIdKey string
+
+const UserIDKey UserIdKey = "id"
 
 func AuthCookie(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +41,9 @@ func AuthCookie(next http.Handler) http.Handler {
 		}
 		r.AddCookie(cookie)
 		http.SetCookie(w, cookie)
-		next.ServeHTTP(w, r)
+
+		ctx := context.WithValue(r.Context(), UserIDKey, userID)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
