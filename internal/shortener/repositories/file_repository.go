@@ -13,6 +13,7 @@ import (
 type FileRepository struct {
 	Storage  map[string]entities.ShortURL
 	FilePath string
+	ToDelete chan entities.ItemToDelete
 }
 
 func (repo *FileRepository) GetByID(ctx context.Context, id string) (entities.ShortURL, bool, error) {

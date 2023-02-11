@@ -49,3 +49,8 @@ type ShortenerSimpleCreateDTO struct {
 type ShortenerSimpleResponseDTO struct {
 	Result string `json:"result"`
 }
+
+type ItemToDelete struct {
+	UserID   uuid.UUID
+	ItemsIDs []string
+}

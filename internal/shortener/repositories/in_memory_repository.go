@@ -8,7 +8,8 @@ import (
 )
 
 type InMemoryRepository struct {
-	Storage map[string]entities.ShortURL
+	Storage  map[string]entities.ShortURL
+	ToDelete chan entities.ItemToDelete
 }
 
 var lock = sync.RWMutex{}

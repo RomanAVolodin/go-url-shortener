@@ -47,9 +47,12 @@ func SetRepository() repositories.Repository {
 			log.Fatal(config.NoConnectionToDatabase)
 		}
 		log.Println("Postgres storage`s been  chosen")
-		return &repositories.DatabaseRepository{
-			Storage: db,
+		repo := &repositories.DatabaseRepository{
+			Storage:  db,
+			ToDelete: make(chan *entities.ItemToDelete),
 		}
+		go repo.AccumulateRecordsToDelete()
+		return repo
 	}
 	if config.Settings.FileStoragePath != "" {
 		repo := repositories.FileRepository{

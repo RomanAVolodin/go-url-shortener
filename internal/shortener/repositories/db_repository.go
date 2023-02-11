@@ -11,10 +11,13 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jmoiron/sqlx"
 	"log"
+	"sync"
+	"time"
 )
 
 type DatabaseRepository struct {
-	Storage *sql.DB
+	Storage  *sql.DB
+	ToDelete chan *entities.ItemToDelete
 }
 
 func (repo *DatabaseRepository) Create(ctx context.Context, shortURL entities.ShortURL) (entities.ShortURL, error) {
@@ -144,6 +147,51 @@ func (repo *DatabaseRepository) GetByUserID(ctx context.Context, userID uuid.UUI
 }
 
 func (repo *DatabaseRepository) DeleteRecords(ctx context.Context, userID uuid.UUID, ids []string) error {
+	itemToDelete := &entities.ItemToDelete{
+		UserID:   userID,
+		ItemsIDs: ids,
+	}
+	go func() { repo.ToDelete <- itemToDelete }()
+	return nil
+}
+
+func (repo *DatabaseRepository) AccumulateRecordsToDelete() {
+	ticker := time.NewTicker(time.Millisecond * 500)
+	localStorage := make(map[uuid.UUID][]string)
+
+	go func() {
+		for {
+			select {
+			case _ = <-ticker.C:
+				for userID, ids := range localStorage {
+					log.Printf("Deleting records for user %s: %s\n", userID.String(), ids)
+					err := repo.DeleteRecordsForUser(context.Background(), userID, ids)
+					if err != nil {
+						repo.ToDelete <- &entities.ItemToDelete{
+							UserID:   userID,
+							ItemsIDs: ids,
+						}
+					}
+					delete(localStorage, userID)
+				}
+			}
+		}
+	}()
+
+	lock := sync.RWMutex{}
+	for item := range repo.ToDelete {
+		lock.Lock()
+		urlsIDs, exist := localStorage[item.UserID]
+		if exist {
+			localStorage[item.UserID] = append(urlsIDs, item.ItemsIDs...)
+		} else {
+			localStorage[item.UserID] = item.ItemsIDs
+		}
+		lock.Unlock()
+	}
+}
+
+func (repo *DatabaseRepository) DeleteRecordsForUser(ctx context.Context, userID uuid.UUID, ids []string) error {
 	query, args, _ := sqlx.In(
 		"UPDATE short_urls SET is_active=false WHERE user_id = ? AND id IN (?)",
 		userID.String(),
