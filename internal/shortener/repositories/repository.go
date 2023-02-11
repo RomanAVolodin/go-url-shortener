@@ -11,4 +11,5 @@ type Repository interface {
 	GetByUserID(ctx context.Context, userID uuid.UUID) ([]entities.ShortURL, error)
 	Create(ctx context.Context, shortURL entities.ShortURL) (entities.ShortURL, error)
 	CreateMultiple(ctx context.Context, urls []entities.ShortURL) ([]entities.ShortURL, error)
+	DeleteRecords(ctx context.Context, userID uuid.UUID, ids []string) error
 }
