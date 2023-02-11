@@ -160,20 +160,17 @@ func (repo *DatabaseRepository) AccumulateRecordsToDelete() {
 	localStorage := make(map[uuid.UUID][]string)
 
 	go func() {
-		for {
-			select {
-			case _ = <-ticker.C:
-				for userID, ids := range localStorage {
-					log.Printf("Deleting records for user %s: %s\n", userID.String(), ids)
-					err := repo.DeleteRecordsForUser(context.Background(), userID, ids)
-					if err != nil {
-						repo.ToDelete <- &entities.ItemToDelete{
-							UserID:   userID,
-							ItemsIDs: ids,
-						}
+		for range ticker.C {
+			for userID, ids := range localStorage {
+				log.Printf("Deleting records for user %s: %s\n", userID.String(), ids)
+				err := repo.DeleteRecordsForUser(context.Background(), userID, ids)
+				if err != nil {
+					repo.ToDelete <- &entities.ItemToDelete{
+						UserID:   userID,
+						ItemsIDs: ids,
 					}
-					delete(localStorage, userID)
 				}
+				delete(localStorage, userID)
 			}
 		}
 	}()
