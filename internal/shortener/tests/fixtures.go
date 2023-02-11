@@ -17,6 +17,7 @@ var ShortURLFixture = entities.ShortURL{
 	Original:      "https://ya.ru",
 	UserID:        UserIDFixture,
 	CorrelationID: "correlation_id",
+	IsActive:      true,
 }
 
 var JSONStorageWithOneElement, _ = json.Marshal([]entities.ShortURLResponseDto{ShortURLFixture.ToResponseDto()})

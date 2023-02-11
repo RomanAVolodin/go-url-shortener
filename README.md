@@ -8,10 +8,10 @@ go run cmd/shortener/main.go -a localhost:8080 -b http://localhost:8080 -f stora
 ```
 
 
-### Test increment 10
+### Test increment 13
 
 ```bash
-./cmd/shortener/shortenertest -test.v -test.run=^TestIteration10$ -binary-path=cmd/shortener/shortener -source-path=./ -database-dsn=postgres://shortener:secret@localhost:5432/shortener
+./cmd/shortener/shortenertest -test.v -test.run=^TestIteration13$ -binary-path=cmd/shortener/shortener -source-path=./ -database-dsn=postgres://shortener:secret@localhost:5432/shortener
 ```
 
 Шаблон репозитория для практического трек "Веб-разработка на Go"

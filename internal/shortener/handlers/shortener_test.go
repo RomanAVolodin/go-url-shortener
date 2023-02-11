@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"compress/gzip"
+	"database/sql"
 	"errors"
 	"fmt"
 	"github.com/DATA-DOG/go-sqlmock"
@@ -422,15 +423,16 @@ func TestDatabaseRepository(t *testing.T) {
 			urlString: "/some_id",
 			method:    http.MethodGet,
 			expect: func(mock sqlmock.Sqlmock) {
-				mock.ExpectQuery("SELECT id, short_url, original_url, user_id, correlation_id FROM short_urls").
+				mock.ExpectQuery("SELECT id, short_url, original_url, user_id, correlation_id, is_active FROM short_urls").
 					WillReturnRows(
-						sqlmock.NewRows([]string{"id", "short_url", "original_url", "user_id", "correlation_id"}).
+						sqlmock.NewRows([]string{"id", "short_url", "original_url", "user_id", "correlation_id", "is_active"}).
 							AddRow(
 								tLoc.ShortURLFixture.ID,
 								tLoc.ShortURLFixture.Short,
 								tLoc.ShortURLFixture.Original,
 								tLoc.ShortURLFixture.UserID.String(),
 								tLoc.ShortURLFixture.CorrelationID,
+								tLoc.ShortURLFixture.IsActive,
 							),
 					)
 			},
@@ -444,11 +446,11 @@ func TestDatabaseRepository(t *testing.T) {
 			urlString: "/some_id",
 			method:    http.MethodGet,
 			expect: func(mock sqlmock.Sqlmock) {
-				mock.ExpectQuery("SELECT id, short_url, original_url, user_id, correlation_id FROM short_urls").
-					WillReturnError(errors.New("error while inserting"))
+				mock.ExpectQuery("SELECT id, short_url, original_url, user_id, correlation_id, is_active FROM short_urls").
+					WillReturnError(sql.ErrNoRows)
 			},
 			wanted: wanted{
-				code: http.StatusInternalServerError,
+				code: http.StatusNotFound,
 			},
 		},
 		{
@@ -456,15 +458,16 @@ func TestDatabaseRepository(t *testing.T) {
 			urlString: "/api/user/urls",
 			method:    http.MethodGet,
 			expect: func(mock sqlmock.Sqlmock) {
-				mock.ExpectQuery("SELECT id, short_url, original_url, user_id, correlation_id FROM short_urls").
+				mock.ExpectQuery("SELECT id, short_url, original_url, user_id, correlation_id, is_active FROM short_urls").
 					WillReturnRows(
-						sqlmock.NewRows([]string{"id", "short_url", "original_url", "user_id", "correlation_id"}).
+						sqlmock.NewRows([]string{"id", "short_url", "original_url", "user_id", "correlation_id", "is_active"}).
 							AddRow(
 								tLoc.ShortURLFixture.ID,
 								tLoc.ShortURLFixture.Short,
 								tLoc.ShortURLFixture.Original,
 								tLoc.ShortURLFixture.UserID.String(),
 								tLoc.ShortURLFixture.CorrelationID,
+								tLoc.ShortURLFixture.IsActive,
 							),
 					)
 			},
@@ -503,15 +506,16 @@ func TestDatabaseRepository(t *testing.T) {
 			expect: func(mock sqlmock.Sqlmock) {
 				mock.ExpectExec("INSERT INTO short_urls").
 					WillReturnError(&pgconn.PgError{Code: pgerrcode.UniqueViolation})
-				mock.ExpectQuery("SELECT id, short_url, original_url, user_id, correlation_id FROM short_urls").
+				mock.ExpectQuery("SELECT id, short_url, original_url, user_id, correlation_id, is_active FROM short_urls").
 					WillReturnRows(
-						sqlmock.NewRows([]string{"id", "short_url", "original_url", "user_id", "correlation_id"}).
+						sqlmock.NewRows([]string{"id", "short_url", "original_url", "user_id", "correlation_id", "is_active"}).
 							AddRow(
 								tLoc.ShortURLFixture.ID,
 								tLoc.ShortURLFixture.Short,
 								tLoc.ShortURLFixture.Original,
 								tLoc.ShortURLFixture.UserID.String(),
 								tLoc.ShortURLFixture.CorrelationID,
+								tLoc.ShortURLFixture.IsActive,
 							),
 					)
 			},
