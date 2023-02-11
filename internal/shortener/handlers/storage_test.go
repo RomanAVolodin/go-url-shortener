@@ -3,6 +3,7 @@ package handlers
 import (
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/middlewares"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
 	tLoc "github.com/RomanAVolodin/go-url-shortener/internal/shortener/tests"
 	"github.com/stretchr/testify/assert"
@@ -13,6 +14,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestFileStorageShortURLHandler(t *testing.T) {
@@ -34,6 +36,7 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 		requestURL   string
 		requestType  string
 		requestBody  string
+		cookie       string
 		repo         *repositories.FileRepository
 		wantedResult wanted
 	}{
@@ -145,6 +148,33 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 				responseStartWith: "[{",
 			},
 		},
+		{
+			name:        "Delete users Urls should be success even for wrong user",
+			requestURL:  "/api/user/urls",
+			requestType: http.MethodDelete,
+			requestBody: "[\"" + tLoc.ShortURLFixture.ID + "\"]",
+			repo: &repositories.FileRepository{
+				Storage:  make(map[string]entities.ShortURL),
+				FilePath: "test.json",
+			},
+			wantedResult: wanted{
+				code: http.StatusAccepted,
+			},
+		},
+		{
+			name:        "Delete users Urls should be success for owner",
+			requestURL:  "/api/user/urls",
+			requestType: http.MethodDelete,
+			requestBody: "[\"" + tLoc.ShortURLFixture.ID + "\"]",
+			repo: &repositories.FileRepository{
+				Storage:  map[string]entities.ShortURL{tLoc.ShortURLFixture.ID: tLoc.ShortURLFixture},
+				FilePath: "test.json",
+			},
+			cookie: middlewares.GenerateCookieStringForUserID(tLoc.UserIDFixture),
+			wantedResult: wanted{
+				code: http.StatusAccepted,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -164,6 +194,17 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			h := NewShortenerHandler(tt.repo)
+
+			if tt.cookie != "" {
+				cookie := &http.Cookie{
+					Name:     middlewares.CookieName,
+					Value:    tt.cookie,
+					Expires:  time.Now().Add(24 * time.Hour),
+					HttpOnly: true,
+				}
+				request.AddCookie(cookie)
+			}
+
 			h.ServeHTTP(w, request)
 			res := w.Result()
 			defer res.Body.Close()
