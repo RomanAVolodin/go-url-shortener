@@ -35,6 +35,7 @@ func TestShortURLHandler(t *testing.T) {
 		requestURL   string
 		requestType  string
 		requestBody  string
+		cookie       string
 		repo         repositories.Repository
 		wantedResult wanted
 	}{
@@ -175,6 +176,43 @@ func TestShortURLHandler(t *testing.T) {
 				responseStartWith: "[{",
 			},
 		},
+		{
+			name:        "Delete users Urls should be success even for wrong user",
+			requestURL:  "/api/user/urls",
+			requestType: http.MethodDelete,
+			requestBody: "[\"" + tLoc.ShortURLFixture.ID + "\"]",
+			repo: &repositories.InMemoryRepository{
+				Storage: map[string]entities.ShortURL{tLoc.ShortURLFixture.ID: tLoc.ShortURLFixture},
+			},
+			wantedResult: wanted{
+				code: http.StatusAccepted,
+			},
+		},
+		{
+			name:        "Delete users Urls should be success for owner",
+			requestURL:  "/api/user/urls",
+			requestType: http.MethodDelete,
+			requestBody: "[\"" + tLoc.ShortURLFixture.ID + "\"]",
+			repo: &repositories.InMemoryRepository{
+				Storage: map[string]entities.ShortURL{tLoc.ShortURLFixture.ID: tLoc.ShortURLFixture},
+			},
+			cookie: middlewares.GenerateCookieStringForUserID(tLoc.UserIDFixture),
+			wantedResult: wanted{
+				code: http.StatusAccepted,
+			},
+		},
+		{
+			name:        "Deleted url should not be returned with response code 410",
+			requestURL:  "/" + tLoc.ShortURLFixtureInactive.ID,
+			requestType: http.MethodGet,
+			requestBody: tLoc.ShortURLFixture.Original,
+			repo: &repositories.InMemoryRepository{
+				Storage: map[string]entities.ShortURL{tLoc.ShortURLFixtureInactive.ID: tLoc.ShortURLFixtureInactive},
+			},
+			wantedResult: wanted{
+				code: http.StatusGone,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -192,6 +230,17 @@ func TestShortURLHandler(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			h := NewShortenerHandler(tt.repo)
+
+			if tt.cookie != "" {
+				cookie := &http.Cookie{
+					Name:     middlewares.CookieName,
+					Value:    tt.cookie,
+					Expires:  time.Now().Add(24 * time.Hour),
+					HttpOnly: true,
+				}
+				request.AddCookie(cookie)
+			}
+
 			h.ServeHTTP(w, request)
 			res := w.Result()
 			defer res.Body.Close()
@@ -520,6 +569,17 @@ func TestDatabaseRepository(t *testing.T) {
 					)
 			},
 			wanted: wanted{code: http.StatusConflict},
+		},
+		{
+			name:       "Delete record success",
+			urlString:  "/api/user/urls",
+			bodyString: "[\"" + tLoc.ShortURLFixture.ID + "\"]",
+			method:     http.MethodDelete,
+			expect: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec("UPDATE short_urls SET is_active=false WHERE user_id").
+					WillReturnResult(sqlmock.NewResult(1, 1))
+			},
+			wanted: wanted{code: http.StatusAccepted},
 		},
 	}
 
