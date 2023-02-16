@@ -153,7 +153,7 @@ func (repo *DatabaseRepository) DeleteRecords(ctx context.Context, userID uuid.U
 		UserID:   userID,
 		ItemsIDs: ids,
 	}
-	repo.ToDelete <- itemToDelete
+	go func() { repo.ToDelete <- itemToDelete }()
 	return nil
 }
 
