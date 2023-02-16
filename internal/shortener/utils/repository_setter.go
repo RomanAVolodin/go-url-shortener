@@ -49,7 +49,7 @@ func SetRepository() repositories.Repository {
 		log.Println("Postgres storage`s been  chosen")
 		repo := &repositories.DatabaseRepository{
 			Storage:  db,
-			ToDelete: make(chan *entities.ItemToDelete),
+			ToDelete: make(chan *entities.ItemToDelete, 16),
 		}
 		go repo.AccumulateRecordsToDelete()
 		return repo

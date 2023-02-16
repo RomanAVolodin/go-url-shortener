@@ -20,6 +20,8 @@ type DatabaseRepository struct {
 	ToDelete chan *entities.ItemToDelete
 }
 
+var lockURLToDeleteStorage = sync.Mutex{} // Я вдруг понял, что использовать общий lock для блокировки хранилища URL ждущих удаления глупо :)
+
 func (repo *DatabaseRepository) Create(ctx context.Context, shortURL entities.ShortURL) (entities.ShortURL, error) {
 	_, err := repo.Storage.ExecContext(
 		ctx,
@@ -151,18 +153,20 @@ func (repo *DatabaseRepository) DeleteRecords(ctx context.Context, userID uuid.U
 		UserID:   userID,
 		ItemsIDs: ids,
 	}
-	go func() { repo.ToDelete <- itemToDelete }()
+	repo.ToDelete <- itemToDelete
 	return nil
 }
 
 func (repo *DatabaseRepository) AccumulateRecordsToDelete() {
 	ticker := time.NewTicker(time.Millisecond * 500)
+	defer ticker.Stop()
+
 	localStorage := make(map[uuid.UUID][]string)
 
 	go func() {
 		for range ticker.C {
+			lockURLToDeleteStorage.Lock()
 			for userID, ids := range localStorage {
-				log.Printf("Deleting records for user %s: %s\n", userID.String(), ids)
 				err := repo.DeleteRecordsForUser(context.Background(), userID, ids)
 				if err != nil {
 					repo.ToDelete <- &entities.ItemToDelete{
@@ -172,19 +176,19 @@ func (repo *DatabaseRepository) AccumulateRecordsToDelete() {
 				}
 				delete(localStorage, userID)
 			}
+			lockURLToDeleteStorage.Unlock()
 		}
 	}()
 
-	lock := sync.RWMutex{}
 	for item := range repo.ToDelete {
-		lock.Lock()
+		lockURLToDeleteStorage.Lock()
 		urlsIDs, exist := localStorage[item.UserID]
 		if exist {
 			localStorage[item.UserID] = append(urlsIDs, item.ItemsIDs...)
 		} else {
 			localStorage[item.UserID] = item.ItemsIDs
 		}
-		lock.Unlock()
+		lockURLToDeleteStorage.Unlock()
 	}
 }
 
