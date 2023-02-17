@@ -26,12 +26,13 @@ func (repo *FileRepository) GetByID(ctx context.Context, id string) (entities.Sh
 func (repo *FileRepository) GetByUserID(ctx context.Context, userID uuid.UUID) ([]entities.ShortURL, error) {
 	result := make([]entities.ShortURL, 0, 8)
 	lock.RLock()
+	defer lock.RUnlock()
+
 	for _, shortURL := range repo.Storage {
 		if shortURL.UserID == userID && shortURL.IsActive {
 			result = append(result, shortURL)
 		}
 	}
-	lock.RUnlock()
 	return result, nil
 }
 
@@ -47,6 +48,9 @@ func (repo *FileRepository) Create(ctx context.Context, shortURL entities.ShortU
 	defer file.Close()
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", " ")
+
+	lock.RLock()
+	defer lock.RUnlock()
 	if err := encoder.Encode(&repo.Storage); err != nil {
 		return entities.ShortURL{}, err
 	}
@@ -69,6 +73,9 @@ func (repo *FileRepository) CreateMultiple(
 	defer file.Close()
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", " ")
+
+	lock.RLock()
+	defer lock.RUnlock()
 	if err := encoder.Encode(&repo.Storage); err != nil {
 		return []entities.ShortURL{}, err
 	}
@@ -92,10 +99,12 @@ func (repo *FileRepository) DeleteRecords(ctx context.Context, userID uuid.UUID,
 	defer file.Close()
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", " ")
+
+	lock.RLock()
+	defer lock.RUnlock()
 	if err = encoder.Encode(&repo.Storage); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -106,6 +115,9 @@ func (repo *FileRepository) Restore() error {
 	}
 	defer file.Close()
 	decoder := json.NewDecoder(file)
+
+	lock.Lock()
+	defer lock.Unlock()
 	if err := decoder.Decode(&repo.Storage); err == io.EOF {
 		log.Println("State restored")
 	} else if err != nil {
