@@ -10,6 +10,7 @@ type ShortURL struct {
 	Original      string    `json:"original_url"`
 	CorrelationID string    `json:"correlation_id"`
 	UserID        uuid.UUID `json:"user_id"`
+	IsActive      bool      `json:"is_active"`
 }
 
 type ShortURLResponseDto struct {
@@ -47,4 +48,9 @@ type ShortenerSimpleCreateDTO struct {
 
 type ShortenerSimpleResponseDTO struct {
 	Result string `json:"result"`
+}
+
+type ItemToDelete struct {
+	UserID   uuid.UUID
+	ItemsIDs []string
 }

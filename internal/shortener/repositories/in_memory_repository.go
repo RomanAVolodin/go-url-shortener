@@ -8,7 +8,8 @@ import (
 )
 
 type InMemoryRepository struct {
-	Storage map[string]entities.ShortURL
+	Storage  map[string]entities.ShortURL
+	ToDelete chan entities.ItemToDelete
 }
 
 var lock = sync.RWMutex{}
@@ -24,7 +25,7 @@ func (repo *InMemoryRepository) GetByUserID(ctx context.Context, userID uuid.UUI
 	result := make([]entities.ShortURL, 0, 8)
 	lock.RLock()
 	for _, shortURL := range repo.Storage {
-		if shortURL.UserID == userID {
+		if shortURL.UserID == userID && shortURL.IsActive {
 			result = append(result, shortURL)
 		}
 	}
@@ -49,4 +50,16 @@ func (repo *InMemoryRepository) CreateMultiple(
 	}
 	lock.Unlock()
 	return urls, nil
+}
+
+func (repo *InMemoryRepository) DeleteRecords(ctx context.Context, userID uuid.UUID, ids []string) error {
+	lock.Lock()
+	for _, id := range ids {
+		if url, exist := repo.Storage[id]; exist && url.UserID == userID {
+			url.IsActive = false
+			repo.Storage[id] = url
+		}
+	}
+	lock.Unlock()
+	return nil
 }

@@ -9,12 +9,18 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jmoiron/sqlx"
 	"log"
+	"sync"
+	"time"
 )
 
 type DatabaseRepository struct {
-	Storage *sql.DB
+	Storage  *sql.DB
+	ToDelete chan *entities.ItemToDelete
 }
+
+var lockURLToDeleteStorage = sync.Mutex{} // Я вдруг понял, что использовать общий lock для блокировки хранилища URL ждущих удаления глупо :)
 
 func (repo *DatabaseRepository) Create(ctx context.Context, shortURL entities.ShortURL) (entities.ShortURL, error) {
 	_, err := repo.Storage.ExecContext(
@@ -28,7 +34,7 @@ func (repo *DatabaseRepository) Create(ctx context.Context, shortURL entities.Sh
 			var existed entities.ShortURL
 			row := repo.Storage.QueryRowContext(
 				ctx,
-				"SELECT id, short_url, original_url, user_id, correlation_id FROM short_urls WHERE original_url = $1;",
+				"SELECT id, short_url, original_url, user_id, correlation_id, is_active FROM short_urls WHERE original_url = $1;",
 				shortURL.Original,
 			)
 			errExisted := row.Scan(
@@ -37,6 +43,7 @@ func (repo *DatabaseRepository) Create(ctx context.Context, shortURL entities.Sh
 				&existed.Original,
 				&existed.UserID,
 				&existed.CorrelationID,
+				&existed.IsActive,
 			)
 			if errExisted != nil {
 				return entities.ShortURL{}, errExisted
@@ -86,10 +93,17 @@ func (repo *DatabaseRepository) GetByID(ctx context.Context, id string) (entitie
 	var shortURL entities.ShortURL
 	row := repo.Storage.QueryRowContext(
 		ctx,
-		"SELECT id, short_url, original_url, user_id, correlation_id FROM short_urls WHERE id = $1;",
+		"SELECT id, short_url, original_url, user_id, correlation_id, is_active FROM short_urls WHERE id = $1;",
 		id,
 	)
-	err := row.Scan(&shortURL.ID, &shortURL.Short, &shortURL.Original, &shortURL.UserID, &shortURL.CorrelationID)
+	err := row.Scan(
+		&shortURL.ID,
+		&shortURL.Short,
+		&shortURL.Original,
+		&shortURL.UserID,
+		&shortURL.CorrelationID,
+		&shortURL.IsActive,
+	)
 	if err != nil {
 		return entities.ShortURL{}, false, err
 	}
@@ -101,7 +115,7 @@ func (repo *DatabaseRepository) GetByUserID(ctx context.Context, userID uuid.UUI
 
 	rows, err := repo.Storage.QueryContext(
 		ctx,
-		"SELECT id, short_url, original_url, user_id, correlation_id FROM short_urls WHERE user_id = $1;",
+		"SELECT id, short_url, original_url, user_id, correlation_id, is_active FROM short_urls WHERE is_active=true AND user_id = $1;",
 		userID.String(),
 	)
 	if err != nil {
@@ -111,7 +125,14 @@ func (repo *DatabaseRepository) GetByUserID(ctx context.Context, userID uuid.UUI
 
 	for rows.Next() {
 		var shortURL entities.ShortURL
-		err = rows.Scan(&shortURL.ID, &shortURL.Short, &shortURL.Original, &shortURL.UserID, &shortURL.CorrelationID)
+		err = rows.Scan(
+			&shortURL.ID,
+			&shortURL.Short,
+			&shortURL.Original,
+			&shortURL.UserID,
+			&shortURL.CorrelationID,
+			&shortURL.IsActive,
+		)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -125,4 +146,63 @@ func (repo *DatabaseRepository) GetByUserID(ctx context.Context, userID uuid.UUI
 	}
 
 	return shortURLs, nil
+}
+
+func (repo *DatabaseRepository) DeleteRecords(ctx context.Context, userID uuid.UUID, ids []string) error {
+	itemToDelete := &entities.ItemToDelete{
+		UserID:   userID,
+		ItemsIDs: ids,
+	}
+	go func() { repo.ToDelete <- itemToDelete }()
+	return nil
+}
+
+func (repo *DatabaseRepository) AccumulateRecordsToDelete() {
+	ticker := time.NewTicker(time.Millisecond * 500)
+	defer ticker.Stop()
+
+	localStorage := make(map[uuid.UUID][]string)
+
+	go func() {
+		for range ticker.C {
+			lockURLToDeleteStorage.Lock()
+			for userID, ids := range localStorage {
+				err := repo.DeleteRecordsForUser(context.Background(), userID, ids)
+				if err != nil {
+					repo.ToDelete <- &entities.ItemToDelete{
+						UserID:   userID,
+						ItemsIDs: ids,
+					}
+				}
+				delete(localStorage, userID)
+			}
+			lockURLToDeleteStorage.Unlock()
+		}
+	}()
+
+	for item := range repo.ToDelete {
+		lockURLToDeleteStorage.Lock()
+		urlsIDs, exist := localStorage[item.UserID]
+		if exist {
+			localStorage[item.UserID] = append(urlsIDs, item.ItemsIDs...)
+		} else {
+			localStorage[item.UserID] = item.ItemsIDs
+		}
+		lockURLToDeleteStorage.Unlock()
+	}
+}
+
+func (repo *DatabaseRepository) DeleteRecordsForUser(ctx context.Context, userID uuid.UUID, ids []string) error {
+	query, args, _ := sqlx.In(
+		"UPDATE short_urls SET is_active=false WHERE user_id = ? AND id IN (?)",
+		userID.String(),
+		ids,
+	)
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
+	_, err := repo.Storage.ExecContext(
+		ctx,
+		query,
+		args...,
+	)
+	return err
 }

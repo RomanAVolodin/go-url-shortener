@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
@@ -33,11 +34,7 @@ func (h *ShortenerHandler) CreateJSONShortURLHandler(
 		return
 	}
 
-	userID, err := middlewares.GetUserIDFromCookie(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	userID := r.Context().Value(middlewares.UserIDKey).(uuid.UUID)
 
 	shortURL, statusCode, err := h.saveToRepository(r.Context(), createDTO.URL, userID)
 	if err != nil {
@@ -69,11 +66,8 @@ func (h *ShortenerHandler) CreateMultipleShortURLHandler(
 		http.Error(w, config.BadInputData, http.StatusUnprocessableEntity)
 		return
 	}
-	userID, err := middlewares.GetUserIDFromCookie(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+
+	userID := r.Context().Value(middlewares.UserIDKey).(uuid.UUID)
 
 	items, err := h.saveMultipleToRepository(r.Context(), incomingDTOs, userID)
 	if err != nil {
@@ -103,11 +97,7 @@ func (h *ShortenerHandler) CreateShortURLHandler(
 		return
 	}
 
-	userID, err := middlewares.GetUserIDFromCookie(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	userID := r.Context().Value(middlewares.UserIDKey).(uuid.UUID)
 
 	shortURL, statusCode, err := h.saveToRepository(r.Context(), string(urlToEncode), userID)
 	if err != nil {
@@ -129,27 +119,28 @@ func (h *ShortenerHandler) RetrieveShortURLHandler(
 ) {
 	urlID := chi.URLParam(r, "id")
 	urlItem, exist, err := h.Repo.GetByID(r.Context(), urlID)
+
 	if exist && err == nil {
+		if !urlItem.IsActive {
+			w.WriteHeader(http.StatusGone)
+			return
+		}
 		w.Header().Set("Location", urlItem.Original)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 		return
 	}
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if !exist || (err != nil && errors.Is(err, sql.ErrNoRows)) {
+		http.Error(w, config.NoURLFoundByID, http.StatusNotFound)
 		return
 	}
-	http.Error(w, config.NoURLFoundByID, http.StatusNotFound)
+	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
 func (h *ShortenerHandler) GetUsersRecordsHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	userID, err := middlewares.GetUserIDFromCookie(r)
-	if err != nil {
-		http.Error(w, config.NoUserIDProvided, http.StatusBadRequest)
-		return
-	}
+	userID := r.Context().Value(middlewares.UserIDKey).(uuid.UUID)
 
 	records, err := h.Repo.GetByUserID(r.Context(), userID)
 	if err != nil {
@@ -193,6 +184,39 @@ func (h *ShortenerHandler) PingDatabase(w http.ResponseWriter, r *http.Request) 
 	http.Error(w, config.NoConnectionToDatabase, http.StatusInternalServerError)
 }
 
+func (h *ShortenerHandler) DeleteRecordsHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	requestBody, doneWithError := h.readBody(w, r)
+	if doneWithError {
+		return
+	}
+	var idsToDelete []string
+	if err := json.Unmarshal(requestBody, &idsToDelete); err != nil || len(idsToDelete) == 0 {
+		http.Error(w, config.BadInputData, http.StatusUnprocessableEntity)
+		return
+	}
+
+	userID := r.Context().Value(middlewares.UserIDKey).(uuid.UUID)
+
+	err := h.deleteFromRepository(r.Context(), idsToDelete, userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+}
+
+func (h *ShortenerHandler) deleteFromRepository(
+	ctx context.Context,
+	ids []string,
+	userID uuid.UUID,
+) error {
+	return h.Repo.DeleteRecords(ctx, userID, ids)
+}
+
 func (h *ShortenerHandler) saveToRepository(
 	ctx context.Context,
 	urlToEncode string,
@@ -204,6 +228,7 @@ func (h *ShortenerHandler) saveToRepository(
 		Short:    utils.GenerateResultURL(id),
 		Original: urlToEncode,
 		UserID:   userID,
+		IsActive: true,
 	}
 	url, err := h.Repo.Create(ctx, shortURL)
 
@@ -233,6 +258,7 @@ func (h *ShortenerHandler) saveMultipleToRepository(
 			Original:      item.Original,
 			CorrelationID: item.CorrelationID,
 			UserID:        userID,
+			IsActive:      true,
 		}
 		urls = append(urls, shortURL)
 	}

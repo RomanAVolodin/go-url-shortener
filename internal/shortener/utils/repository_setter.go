@@ -39,6 +39,7 @@ func SetRepository() repositories.Repository {
 				short_url varchar(150) NOT NULL, 
 				original_url varchar(255) NOT NULL UNIQUE, 
 				correlation_id varchar(255), 
+				is_active boolean default true, 
 				user_id uuid NOT NULL
             )`,
 		)
@@ -46,9 +47,12 @@ func SetRepository() repositories.Repository {
 			log.Fatal(config.NoConnectionToDatabase)
 		}
 		log.Println("Postgres storage`s been  chosen")
-		return &repositories.DatabaseRepository{
-			Storage: db,
+		repo := &repositories.DatabaseRepository{
+			Storage:  db,
+			ToDelete: make(chan *entities.ItemToDelete, 16),
 		}
+		go repo.AccumulateRecordsToDelete()
+		return repo
 	}
 	if config.Settings.FileStoragePath != "" {
 		repo := repositories.FileRepository{
