@@ -624,3 +624,60 @@ func TestDatabaseRepository(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkNewShortenerHandler(b *testing.B) {
+	config.Settings.IsTestMode = true
+	tests := []struct {
+		name        string
+		requestURL  string
+		requestType string
+		requestBody string
+		repo        repositories.Repository
+	}{
+		{
+			name:        "Get url by its ID",
+			requestURL:  "/" + tLoc.ShortURLFixture.ID,
+			requestType: http.MethodGet,
+			requestBody: "",
+		},
+		{
+			name:        "URL link generation",
+			requestURL:  "/api/shorten",
+			requestType: http.MethodPost,
+			requestBody: "https://ya.ru",
+			repo:        &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortURL)},
+		},
+		{
+			name:        "URL link generation",
+			requestURL:  "/",
+			requestType: http.MethodPost,
+			requestBody: "https://ya.ru",
+			repo:        &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortURL)},
+		},
+	}
+	w := httptest.NewRecorder()
+
+	for _, tt := range tests {
+		var request *http.Request
+		if tt.requestBody != "" {
+			request = httptest.NewRequest(
+				tt.requestType,
+				tt.requestURL,
+				strings.NewReader(tt.requestBody),
+			)
+		} else {
+			request = httptest.NewRequest(tt.requestType, tt.requestURL, nil)
+		}
+		h := NewShortenerHandler(&repositories.InMemoryRepository{
+			Storage: map[string]entities.ShortURL{tLoc.ShortURLFixture.ID: tLoc.ShortURLFixture},
+		})
+
+		b.Run(tt.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				h.ServeHTTP(w, request)
+				res := w.Result()
+				res.Body.Close()
+			}
+		})
+	}
+}

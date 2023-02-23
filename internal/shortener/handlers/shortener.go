@@ -21,7 +21,9 @@ func NewShortenerHandler(repo repo.Repository) *ShortenerHandler {
 	}
 	h.Use(middleware.RequestID)
 	h.Use(middleware.RealIP)
-	h.Use(middleware.Logger)
+	if !config.Settings.IsTestMode {
+		h.Use(middleware.Logger)
+	}
 	h.Use(middleware.Recoverer)
 	h.Use(mw.GzipMiddleware)
 	h.Use(mw.RequestUnzip)
@@ -37,5 +39,9 @@ func NewShortenerHandler(repo repo.Repository) *ShortenerHandler {
 	h.MethodNotAllowed(func(writer http.ResponseWriter, request *http.Request) {
 		http.Error(writer, config.OnlyGetPostRequestAllowedError, http.StatusMethodNotAllowed)
 	})
+
+	if config.Settings.IsTestMode {
+		h.Mount("/debug", middleware.Profiler())
+	}
 	return h
 }
