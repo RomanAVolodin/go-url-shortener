@@ -40,6 +40,8 @@ func NewShortenerHandler(repo repo.Repository) *ShortenerHandler {
 		http.Error(writer, config.OnlyGetPostRequestAllowedError, http.StatusMethodNotAllowed)
 	})
 
-	h.Mount("/debug", middleware.Profiler())
+	if config.Settings.IsTestMode {
+		h.Mount("/debug", middleware.Profiler())
+	}
 	return h
 }

@@ -675,7 +675,8 @@ func BenchmarkNewShortenerHandler(b *testing.B) {
 		b.Run(tt.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				h.ServeHTTP(w, request)
-				_ = w.Result()
+				res := w.Result()
+				res.Body.Close()
 			}
 		})
 	}
