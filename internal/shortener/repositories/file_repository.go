@@ -3,11 +3,12 @@ package repositories
 import (
 	"context"
 	"encoding/json"
-	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
-	"github.com/google/uuid"
 	"io"
 	"log"
 	"os"
+
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
+	"github.com/google/uuid"
 )
 
 type FileRepository struct {

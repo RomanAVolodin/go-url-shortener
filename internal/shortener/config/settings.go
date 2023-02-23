@@ -3,9 +3,10 @@ package config
 import (
 	"flag"
 	"fmt"
-	"github.com/caarlos0/env/v6"
 	"log"
 	"os"
+
+	"github.com/caarlos0/env/v6"
 )
 
 const (
@@ -24,6 +25,7 @@ type AppSettings struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	SecretAuthKey   string `env:"AUTH_SECRET_KEY"   default:"super_secret"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
+	IsTestMode      bool   `env:"IS_TEST"           default:"false"`
 }
 
 var Settings AppSettings

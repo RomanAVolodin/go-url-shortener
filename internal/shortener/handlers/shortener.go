@@ -1,27 +1,30 @@
 package handlers
 
 import (
+	"net/http"
+
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
 	mw "github.com/RomanAVolodin/go-url-shortener/internal/shortener/middlewares"
 	repo "github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"net/http"
 )
 
 type ShortenerHandler struct {
 	*chi.Mux
-	Repo repo.Repository
+	Repo repo.IRepository
 }
 
-func NewShortenerHandler(repo repo.Repository) *ShortenerHandler {
+func NewShortenerHandler(repo repo.IRepository) *ShortenerHandler {
 	h := &ShortenerHandler{
 		Mux:  chi.NewMux(),
 		Repo: repo,
 	}
 	h.Use(middleware.RequestID)
 	h.Use(middleware.RealIP)
-	h.Use(middleware.Logger)
+	if !config.Settings.IsTestMode {
+		h.Use(middleware.Logger)
+	}
 	h.Use(middleware.Recoverer)
 	h.Use(mw.GzipMiddleware)
 	h.Use(mw.RequestUnzip)
@@ -37,5 +40,9 @@ func NewShortenerHandler(repo repo.Repository) *ShortenerHandler {
 	h.MethodNotAllowed(func(writer http.ResponseWriter, request *http.Request) {
 		http.Error(writer, config.OnlyGetPostRequestAllowedError, http.StatusMethodNotAllowed)
 	})
+
+	if config.Settings.IsTestMode {
+		h.Mount("/debug", middleware.Profiler())
+	}
 	return h
 }

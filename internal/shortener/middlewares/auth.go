@@ -6,11 +6,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
-	"github.com/google/uuid"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
+	"github.com/google/uuid"
 )
 
 const CookieName = "user-id"
