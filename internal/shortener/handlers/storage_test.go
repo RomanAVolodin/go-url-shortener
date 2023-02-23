@@ -1,12 +1,6 @@
 package handlers
 
 import (
-	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
-	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
-	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/middlewares"
-	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
-	tLoc "github.com/RomanAVolodin/go-url-shortener/internal/shortener/tests"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"log"
 	"net/http"
@@ -15,6 +9,13 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/middlewares"
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
+	tLoc "github.com/RomanAVolodin/go-url-shortener/internal/shortener/tests"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFileStorageShortURLHandler(t *testing.T) {

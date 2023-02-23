@@ -2,9 +2,10 @@ package repositories
 
 import (
 	"context"
+	"sync"
+
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
 	"github.com/google/uuid"
-	"sync"
 )
 
 type InMemoryRepository struct {

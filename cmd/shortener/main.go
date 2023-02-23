@@ -1,11 +1,12 @@
 package main
 
 import (
+	"log"
+	"net/http"
+
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/handlers"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/utils"
-	"log"
-	"net/http"
 )
 
 func main() {
