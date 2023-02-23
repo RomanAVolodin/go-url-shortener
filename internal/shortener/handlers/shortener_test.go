@@ -6,6 +6,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
@@ -15,12 +22,6 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
-	"io"
-	"net/http"
-	"net/http/httptest"
-	"strings"
-	"testing"
-	"time"
 )
 
 func TestShortURLHandler(t *testing.T) {
@@ -36,7 +37,7 @@ func TestShortURLHandler(t *testing.T) {
 		requestType  string
 		requestBody  string
 		cookie       string
-		repo         repositories.Repository
+		repo         repositories.IRepository
 		wantedResult wanted
 	}{
 		{
@@ -328,7 +329,7 @@ func TestAuthCookies(t *testing.T) {
 		requestType  string
 		requestBody  string
 		cookie       string
-		repo         repositories.Repository
+		repo         repositories.IRepository
 		wantedResult wanted
 	}{
 		{
@@ -632,7 +633,7 @@ func BenchmarkNewShortenerHandler(b *testing.B) {
 		requestURL  string
 		requestType string
 		requestBody string
-		repo        repositories.Repository
+		repo        repositories.IRepository
 	}{
 		{
 			name:        "Get url by its ID",

@@ -3,15 +3,16 @@ package utils
 import (
 	"context"
 	"database/sql"
+	"log"
+	"time"
+
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"log"
-	"time"
 )
 
-func SetRepository() repositories.Repository {
+func SetRepository() repositories.IRepository {
 	if config.Settings.DatabaseDSN != "" {
 		db, err := sql.Open("pgx", config.Settings.DatabaseDSN)
 		if err != nil {
