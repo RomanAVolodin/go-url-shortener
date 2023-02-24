@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/utils"
 	"github.com/google/uuid"

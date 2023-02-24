@@ -1,3 +1,4 @@
+// Package shortenerrors declares custom application errors.
 package shortenerrors
 
 import "errors"

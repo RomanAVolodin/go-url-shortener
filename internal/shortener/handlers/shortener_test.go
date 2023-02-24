@@ -6,6 +6,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
@@ -15,12 +22,6 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
-	"io"
-	"net/http"
-	"net/http/httptest"
-	"strings"
-	"testing"
-	"time"
 )
 
 func TestShortURLHandler(t *testing.T) {
@@ -36,7 +37,7 @@ func TestShortURLHandler(t *testing.T) {
 		requestType  string
 		requestBody  string
 		cookie       string
-		repo         repositories.Repository
+		repo         repositories.IRepository
 		wantedResult wanted
 	}{
 		{
@@ -229,7 +230,7 @@ func TestShortURLHandler(t *testing.T) {
 			request.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
 
 			w := httptest.NewRecorder()
-			h := NewShortenerHandler(tt.repo)
+			h := NewShortener(tt.repo)
 
 			if tt.cookie != "" {
 				cookie := &http.Cookie{
@@ -271,7 +272,7 @@ func TestRequestUnzip(t *testing.T) {
 		"Accept-Encoding": {"gzip"},
 	}
 	w := httptest.NewRecorder()
-	h := NewShortenerHandler(repo)
+	h := NewShortener(repo)
 	h.ServeHTTP(w, request)
 	res := w.Result()
 	defer res.Body.Close()
@@ -292,7 +293,7 @@ func TestZippedContent(t *testing.T) {
 		"Content-Encoding": {"gzip"},
 	}
 	w := httptest.NewRecorder()
-	h := NewShortenerHandler(repo)
+	h := NewShortener(repo)
 	h.ServeHTTP(w, request)
 	res := w.Result()
 	defer res.Body.Close()
@@ -328,7 +329,7 @@ func TestAuthCookies(t *testing.T) {
 		requestType  string
 		requestBody  string
 		cookie       string
-		repo         repositories.Repository
+		repo         repositories.IRepository
 		wantedResult wanted
 	}{
 		{
@@ -396,7 +397,7 @@ func TestAuthCookies(t *testing.T) {
 				"Content-Type": {"application/x-www-form-urlencoded; param=value"},
 			}
 			w := httptest.NewRecorder()
-			h := NewShortenerHandler(tt.repo)
+			h := NewShortener(tt.repo)
 
 			if tt.cookie != "" {
 				cookie := &http.Cookie{
@@ -604,7 +605,7 @@ func TestDatabaseRepository(t *testing.T) {
 			repo := repositories.DatabaseRepository{Storage: db}
 
 			w := httptest.NewRecorder()
-			h := NewShortenerHandler(&repo)
+			h := NewShortener(&repo)
 			h.ServeHTTP(w, request)
 			res := w.Result()
 			defer res.Body.Close()
@@ -621,6 +622,63 @@ func TestDatabaseRepository(t *testing.T) {
 			}
 
 			assert.Equal(t, tt.wanted.header, res.Header.Get("Location"))
+		})
+	}
+}
+
+func BenchmarkNewShortenerHandler(b *testing.B) {
+	config.Settings.IsTestMode = true
+	tests := []struct {
+		name        string
+		requestURL  string
+		requestType string
+		requestBody string
+		repo        repositories.IRepository
+	}{
+		{
+			name:        "Get url by its ID",
+			requestURL:  "/" + tLoc.ShortURLFixture.ID,
+			requestType: http.MethodGet,
+			requestBody: "",
+		},
+		{
+			name:        "URL link generation",
+			requestURL:  "/api/shorten",
+			requestType: http.MethodPost,
+			requestBody: "https://ya.ru",
+			repo:        &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortURL)},
+		},
+		{
+			name:        "URL link generation",
+			requestURL:  "/",
+			requestType: http.MethodPost,
+			requestBody: "https://ya.ru",
+			repo:        &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortURL)},
+		},
+	}
+	w := httptest.NewRecorder()
+
+	for _, tt := range tests {
+		var request *http.Request
+		if tt.requestBody != "" {
+			request = httptest.NewRequest(
+				tt.requestType,
+				tt.requestURL,
+				strings.NewReader(tt.requestBody),
+			)
+		} else {
+			request = httptest.NewRequest(tt.requestType, tt.requestURL, nil)
+		}
+		h := NewShortener(&repositories.InMemoryRepository{
+			Storage: map[string]entities.ShortURL{tLoc.ShortURLFixture.ID: tLoc.ShortURLFixture},
+		})
+
+		b.Run(tt.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				h.ServeHTTP(w, request)
+				res := w.Result()
+				res.Body.Close()
+			}
 		})
 	}
 }

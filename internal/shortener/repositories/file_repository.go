@@ -3,13 +3,15 @@ package repositories
 import (
 	"context"
 	"encoding/json"
-	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
-	"github.com/google/uuid"
 	"io"
 	"log"
 	"os"
+
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
+	"github.com/google/uuid"
 )
 
+// FileRepository repository based on file storage.
 type FileRepository struct {
 	Storage  map[string]entities.ShortURL
 	FilePath string

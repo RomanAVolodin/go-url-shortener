@@ -2,11 +2,13 @@ package repositories
 
 import (
 	"context"
+	"sync"
+
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
 	"github.com/google/uuid"
-	"sync"
 )
 
+// InMemoryRepository repository based memory storage.
 type InMemoryRepository struct {
 	Storage  map[string]entities.ShortURL
 	ToDelete chan entities.ItemToDelete
