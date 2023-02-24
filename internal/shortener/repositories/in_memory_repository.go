@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// InMemoryRepository repository based memory storage.
 type InMemoryRepository struct {
 	Storage  map[string]entities.ShortURL
 	ToDelete chan entities.ItemToDelete

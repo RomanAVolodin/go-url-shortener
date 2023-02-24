@@ -16,12 +16,13 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+// DatabaseRepository repository based on database.
 type DatabaseRepository struct {
 	Storage  *sql.DB
 	ToDelete chan *entities.ItemToDelete
 }
 
-var lockURLToDeleteStorage = sync.Mutex{} // Я вдруг понял, что использовать общий lock для блокировки хранилища URL ждущих удаления глупо :)
+var lockURLToDeleteStorage = sync.Mutex{}
 
 func (repo *DatabaseRepository) Create(ctx context.Context, shortURL entities.ShortURL) (entities.ShortURL, error) {
 	_, err := repo.Storage.ExecContext(

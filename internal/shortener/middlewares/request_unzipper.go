@@ -6,6 +6,7 @@ import (
 	"net/http"
 )
 
+// RequestUnzip handles gzipped request.
 func RequestUnzip(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Encoding") == "gzip" {

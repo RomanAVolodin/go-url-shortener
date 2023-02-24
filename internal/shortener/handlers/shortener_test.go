@@ -230,7 +230,7 @@ func TestShortURLHandler(t *testing.T) {
 			request.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
 
 			w := httptest.NewRecorder()
-			h := NewShortenerHandler(tt.repo)
+			h := NewShortener(tt.repo)
 
 			if tt.cookie != "" {
 				cookie := &http.Cookie{
@@ -272,7 +272,7 @@ func TestRequestUnzip(t *testing.T) {
 		"Accept-Encoding": {"gzip"},
 	}
 	w := httptest.NewRecorder()
-	h := NewShortenerHandler(repo)
+	h := NewShortener(repo)
 	h.ServeHTTP(w, request)
 	res := w.Result()
 	defer res.Body.Close()
@@ -293,7 +293,7 @@ func TestZippedContent(t *testing.T) {
 		"Content-Encoding": {"gzip"},
 	}
 	w := httptest.NewRecorder()
-	h := NewShortenerHandler(repo)
+	h := NewShortener(repo)
 	h.ServeHTTP(w, request)
 	res := w.Result()
 	defer res.Body.Close()
@@ -397,7 +397,7 @@ func TestAuthCookies(t *testing.T) {
 				"Content-Type": {"application/x-www-form-urlencoded; param=value"},
 			}
 			w := httptest.NewRecorder()
-			h := NewShortenerHandler(tt.repo)
+			h := NewShortener(tt.repo)
 
 			if tt.cookie != "" {
 				cookie := &http.Cookie{
@@ -605,7 +605,7 @@ func TestDatabaseRepository(t *testing.T) {
 			repo := repositories.DatabaseRepository{Storage: db}
 
 			w := httptest.NewRecorder()
-			h := NewShortenerHandler(&repo)
+			h := NewShortener(&repo)
 			h.ServeHTTP(w, request)
 			res := w.Result()
 			defer res.Body.Close()
@@ -669,7 +669,7 @@ func BenchmarkNewShortenerHandler(b *testing.B) {
 		} else {
 			request = httptest.NewRequest(tt.requestType, tt.requestURL, nil)
 		}
-		h := NewShortenerHandler(&repositories.InMemoryRepository{
+		h := NewShortener(&repositories.InMemoryRepository{
 			Storage: map[string]entities.ShortURL{tLoc.ShortURLFixture.ID: tLoc.ShortURLFixture},
 		})
 

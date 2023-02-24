@@ -1,3 +1,4 @@
+// Package handlers is the main webserver.
 package handlers
 
 import (
@@ -10,13 +11,17 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-type ShortenerHandler struct {
+// Shortener is struct based on Chi router with repository.
+//
+// https://github.com/go-chi/chi
+type Shortener struct {
 	*chi.Mux
 	Repo repo.IRepository
 }
 
-func NewShortenerHandler(repo repo.IRepository) *ShortenerHandler {
-	h := &ShortenerHandler{
+// NewShortener creates new Shortener instance with all needed.
+func NewShortener(repo repo.IRepository) *Shortener {
+	h := &Shortener{
 		Mux:  chi.NewMux(),
 		Repo: repo,
 	}

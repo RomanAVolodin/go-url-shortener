@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// FileRepository repository based on file storage.
 type FileRepository struct {
 	Storage  map[string]entities.ShortURL
 	FilePath string

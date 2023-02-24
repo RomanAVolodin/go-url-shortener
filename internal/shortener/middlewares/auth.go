@@ -1,3 +1,4 @@
+// Package middlewares includes all middlewares of application.
 package middlewares
 
 import (

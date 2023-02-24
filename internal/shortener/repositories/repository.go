@@ -1,3 +1,4 @@
+// Package repositories declares IRepository interface and all of its implementations.
 package repositories
 
 import (
@@ -7,6 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// IRepository interface for ShortUrl repositories.
 type IRepository interface {
 	GetByID(ctx context.Context, id string) (entities.ShortURL, bool, error)
 	GetByUserID(ctx context.Context, userID uuid.UUID) ([]entities.ShortURL, error)

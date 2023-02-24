@@ -194,7 +194,7 @@ func TestFileStorageShortURLHandler(t *testing.T) {
 			request.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
 
 			w := httptest.NewRecorder()
-			h := NewShortenerHandler(tt.repo)
+			h := NewShortener(tt.repo)
 
 			if tt.cookie != "" {
 				cookie := &http.Cookie{

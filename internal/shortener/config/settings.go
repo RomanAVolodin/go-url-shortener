@@ -1,3 +1,4 @@
+// Package config holds all the configuration variables for application.
 package config
 
 import (
@@ -9,6 +10,7 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
+// Constants for error responses.
 const (
 	OnlyGetPostRequestAllowedError = "Only GET/POST requests allowed"
 	RequestBodyEmptyError          = "Request body is empty"
@@ -19,6 +21,7 @@ const (
 	NoConnectionToDatabase         = "Error while connecting to database"
 )
 
+// AppSettings struct to handle application settings parsed from environment variables.
 type AppSettings struct {
 	ServerAddress   string `env:"SERVER_ADDRESS"`
 	BaseURL         string `env:"BASE_URL"`
@@ -28,6 +31,7 @@ type AppSettings struct {
 	IsTestMode      bool   `env:"IS_TEST"           default:"false"`
 }
 
+// Settings singleton with application configuration, initializes in `init()` method.
 var Settings AppSettings
 
 func init() {
