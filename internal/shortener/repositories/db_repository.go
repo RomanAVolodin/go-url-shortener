@@ -22,8 +22,10 @@ type DatabaseRepository struct {
 	ToDelete chan *entities.ItemToDelete
 }
 
+// lockURLToDeleteStorage mutex for deletion process.
 var lockURLToDeleteStorage = sync.Mutex{}
 
+// Create creates ShortURL.
 func (repo *DatabaseRepository) Create(ctx context.Context, shortURL entities.ShortURL) (entities.ShortURL, error) {
 	_, err := repo.Storage.ExecContext(
 		ctx,
@@ -57,6 +59,7 @@ func (repo *DatabaseRepository) Create(ctx context.Context, shortURL entities.Sh
 	return shortURL, nil
 }
 
+// CreateMultiple creates multiple ShortURLs.
 func (repo *DatabaseRepository) CreateMultiple(
 	ctx context.Context,
 	urls []entities.ShortURL,
@@ -91,6 +94,7 @@ func (repo *DatabaseRepository) CreateMultiple(
 	return urls, tx.Commit()
 }
 
+// GetByID returns ShortURL by its id.
 func (repo *DatabaseRepository) GetByID(ctx context.Context, id string) (entities.ShortURL, bool, error) {
 	var shortURL entities.ShortURL
 	row := repo.Storage.QueryRowContext(
@@ -112,6 +116,7 @@ func (repo *DatabaseRepository) GetByID(ctx context.Context, id string) (entitie
 	return shortURL, true, nil
 }
 
+// GetByUserID returns ShortURLs by user id.
 func (repo *DatabaseRepository) GetByUserID(ctx context.Context, userID uuid.UUID) ([]entities.ShortURL, error) {
 	shortURLs := make([]entities.ShortURL, 0, 16)
 
@@ -150,6 +155,7 @@ func (repo *DatabaseRepository) GetByUserID(ctx context.Context, userID uuid.UUI
 	return shortURLs, nil
 }
 
+// DeleteRecords deletes ShortURLs by ids.
 func (repo *DatabaseRepository) DeleteRecords(ctx context.Context, userID uuid.UUID, ids []string) error {
 	itemToDelete := &entities.ItemToDelete{
 		UserID:   userID,
@@ -159,6 +165,7 @@ func (repo *DatabaseRepository) DeleteRecords(ctx context.Context, userID uuid.U
 	return nil
 }
 
+// AccumulateRecordsToDelete accumulates ShortURLs to delete in background.
 func (repo *DatabaseRepository) AccumulateRecordsToDelete() {
 	ticker := time.NewTicker(time.Millisecond * 500)
 	defer ticker.Stop()
@@ -194,6 +201,7 @@ func (repo *DatabaseRepository) AccumulateRecordsToDelete() {
 	}
 }
 
+// DeleteRecordsForUser deletes all ShortURLs for user.
 func (repo *DatabaseRepository) DeleteRecordsForUser(ctx context.Context, userID uuid.UUID, ids []string) error {
 	query, args, _ := sqlx.In(
 		"UPDATE short_urls SET is_active=false WHERE user_id = ? AND id IN (?)",

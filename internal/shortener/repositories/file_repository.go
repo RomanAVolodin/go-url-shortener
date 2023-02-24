@@ -18,6 +18,7 @@ type FileRepository struct {
 	ToDelete chan entities.ItemToDelete
 }
 
+// GetByID returns ShortURL by its id.
 func (repo *FileRepository) GetByID(ctx context.Context, id string) (entities.ShortURL, bool, error) {
 	lock.RLock()
 	result, exist := repo.Storage[id]
@@ -25,6 +26,7 @@ func (repo *FileRepository) GetByID(ctx context.Context, id string) (entities.Sh
 	return result, exist, nil
 }
 
+// GetByUserID returns ShortURLs by user id.
 func (repo *FileRepository) GetByUserID(ctx context.Context, userID uuid.UUID) ([]entities.ShortURL, error) {
 	result := make([]entities.ShortURL, 0, 8)
 	lock.RLock()
@@ -38,6 +40,7 @@ func (repo *FileRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (
 	return result, nil
 }
 
+// Create creates ShortURL.
 func (repo *FileRepository) Create(ctx context.Context, shortURL entities.ShortURL) (entities.ShortURL, error) {
 	lock.Lock()
 	repo.Storage[shortURL.ID] = shortURL
@@ -59,6 +62,7 @@ func (repo *FileRepository) Create(ctx context.Context, shortURL entities.ShortU
 	return shortURL, nil
 }
 
+// CreateMultiple creates multiple ShortURLs.
 func (repo *FileRepository) CreateMultiple(
 	ctx context.Context,
 	urls []entities.ShortURL,
@@ -84,6 +88,7 @@ func (repo *FileRepository) CreateMultiple(
 	return urls, nil
 }
 
+// DeleteRecords deletes ShortURLs by ids.
 func (repo *FileRepository) DeleteRecords(ctx context.Context, userID uuid.UUID, ids []string) error {
 	lock.Lock()
 	for _, id := range ids {
@@ -110,6 +115,7 @@ func (repo *FileRepository) DeleteRecords(ctx context.Context, userID uuid.UUID,
 	return nil
 }
 
+// Restore restores storage from file.
 func (repo *FileRepository) Restore() error {
 	file, err := repo.openStorageFile()
 	if err != nil {
@@ -128,6 +134,7 @@ func (repo *FileRepository) Restore() error {
 	return nil
 }
 
+// openStorageFile opens storage file.
 func (repo *FileRepository) openStorageFile() (*os.File, error) {
 	file, err := os.OpenFile(repo.FilePath, os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {

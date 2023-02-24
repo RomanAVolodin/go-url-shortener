@@ -33,6 +33,7 @@ type ShortURLWithCorrelationCreateDto struct {
 	Original      string `json:"original_url"`
 }
 
+// ToResponseDto converts ShortURL to ShortURLResponseDto
 func (item *ShortURL) ToResponseDto() ShortURLResponseDto {
 	return ShortURLResponseDto{
 		Short:    item.Short,
@@ -40,6 +41,7 @@ func (item *ShortURL) ToResponseDto() ShortURLResponseDto {
 	}
 }
 
+// ToResponseWithCorrelationDto converts ShortURL to ShortURLResponseWithCorrelationDto
 func (item *ShortURL) ToResponseWithCorrelationDto() ShortURLResponseWithCorrelationDto {
 	return ShortURLResponseWithCorrelationDto{
 		CorrelationID: item.CorrelationID,

@@ -14,8 +14,10 @@ type InMemoryRepository struct {
 	ToDelete chan entities.ItemToDelete
 }
 
+// lock mutex for storage.
 var lock = sync.RWMutex{}
 
+// GetByID returns ShortURL by its id.
 func (repo *InMemoryRepository) GetByID(ctx context.Context, id string) (entities.ShortURL, bool, error) {
 	lock.RLock()
 	result, exist := repo.Storage[id]
@@ -23,6 +25,7 @@ func (repo *InMemoryRepository) GetByID(ctx context.Context, id string) (entitie
 	return result, exist, nil
 }
 
+// GetByUserID returns ShortURLs by user id.
 func (repo *InMemoryRepository) GetByUserID(ctx context.Context, userID uuid.UUID) ([]entities.ShortURL, error) {
 	result := make([]entities.ShortURL, 0, 8)
 	lock.RLock()
@@ -35,6 +38,7 @@ func (repo *InMemoryRepository) GetByUserID(ctx context.Context, userID uuid.UUI
 	return result, nil
 }
 
+// Create creates ShortURL.
 func (repo *InMemoryRepository) Create(ctx context.Context, shortURL entities.ShortURL) (entities.ShortURL, error) {
 	lock.Lock()
 	repo.Storage[shortURL.ID] = shortURL
@@ -42,6 +46,7 @@ func (repo *InMemoryRepository) Create(ctx context.Context, shortURL entities.Sh
 	return shortURL, nil
 }
 
+// CreateMultiple creates multiple ShortURLs.
 func (repo *InMemoryRepository) CreateMultiple(
 	ctx context.Context,
 	urls []entities.ShortURL,
@@ -54,6 +59,7 @@ func (repo *InMemoryRepository) CreateMultiple(
 	return urls, nil
 }
 
+// DeleteRecords deletes ShortURLs by ids.
 func (repo *InMemoryRepository) DeleteRecords(ctx context.Context, userID uuid.UUID, ids []string) error {
 	lock.Lock()
 	for _, id := range ids {
