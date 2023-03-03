@@ -5,6 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"io"
+	"net/http"
+	"time"
+
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/entities"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/middlewares"
@@ -15,12 +19,10 @@ import (
 	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/lithammer/shortuuid"
-	"io"
-	"net/http"
-	"time"
 )
 
-func (h *ShortenerHandler) CreateJSONShortURLHandler(
+// CreateJSONShortURLHandler handles POST request with json DTO.
+func (h *Shortener) CreateJSONShortURLHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
@@ -53,7 +55,8 @@ func (h *ShortenerHandler) CreateJSONShortURLHandler(
 	w.Write(jsonResponse)
 }
 
-func (h *ShortenerHandler) CreateMultipleShortURLHandler(
+// CreateMultipleShortURLHandler handles POST request with multiple urls to process.
+func (h *Shortener) CreateMultipleShortURLHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
@@ -61,7 +64,7 @@ func (h *ShortenerHandler) CreateMultipleShortURLHandler(
 	if doneWithError {
 		return
 	}
-	var incomingDTOs []entities.ShortURLResponseWithCorrelationCreateDto
+	var incomingDTOs []entities.ShortURLWithCorrelationCreateDto
 	if err := json.Unmarshal(requestBody, &incomingDTOs); err != nil {
 		http.Error(w, config.BadInputData, http.StatusUnprocessableEntity)
 		return
@@ -88,7 +91,8 @@ func (h *ShortenerHandler) CreateMultipleShortURLHandler(
 	w.Write(jsonResponse)
 }
 
-func (h *ShortenerHandler) CreateShortURLHandler(
+// CreateShortURLHandler handles simple POST requests with URL.
+func (h *Shortener) CreateShortURLHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
@@ -113,7 +117,8 @@ func (h *ShortenerHandler) CreateShortURLHandler(
 	}
 }
 
-func (h *ShortenerHandler) RetrieveShortURLHandler(
+// RetrieveShortURLHandler returns short url by it`s id.
+func (h *Shortener) RetrieveShortURLHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
@@ -136,7 +141,8 @@ func (h *ShortenerHandler) RetrieveShortURLHandler(
 	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
-func (h *ShortenerHandler) GetUsersRecordsHandler(
+// GetUsersRecordsHandler returns all records related to current user.
+func (h *Shortener) GetUsersRecordsHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
@@ -167,7 +173,8 @@ func (h *ShortenerHandler) GetUsersRecordsHandler(
 	}
 }
 
-func (h *ShortenerHandler) PingDatabase(w http.ResponseWriter, r *http.Request) {
+// PingDatabase returns Database connection status
+func (h *Shortener) PingDatabase(w http.ResponseWriter, r *http.Request) {
 	if repo, ok := h.Repo.(*repositories.DatabaseRepository); ok {
 		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
 		defer cancel()
@@ -184,7 +191,8 @@ func (h *ShortenerHandler) PingDatabase(w http.ResponseWriter, r *http.Request) 
 	http.Error(w, config.NoConnectionToDatabase, http.StatusInternalServerError)
 }
 
-func (h *ShortenerHandler) DeleteRecordsHandler(
+// DeleteRecordsHandler handles records deletion by it's IDs.
+func (h *Shortener) DeleteRecordsHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
@@ -209,7 +217,7 @@ func (h *ShortenerHandler) DeleteRecordsHandler(
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func (h *ShortenerHandler) deleteFromRepository(
+func (h *Shortener) deleteFromRepository(
 	ctx context.Context,
 	ids []string,
 	userID uuid.UUID,
@@ -217,7 +225,7 @@ func (h *ShortenerHandler) deleteFromRepository(
 	return h.Repo.DeleteRecords(ctx, userID, ids)
 }
 
-func (h *ShortenerHandler) saveToRepository(
+func (h *Shortener) saveToRepository(
 	ctx context.Context,
 	urlToEncode string,
 	userID uuid.UUID,
@@ -244,9 +252,9 @@ func (h *ShortenerHandler) saveToRepository(
 	return url, statusCode, nil
 }
 
-func (h *ShortenerHandler) saveMultipleToRepository(
+func (h *Shortener) saveMultipleToRepository(
 	ctx context.Context,
-	items []entities.ShortURLResponseWithCorrelationCreateDto,
+	items []entities.ShortURLWithCorrelationCreateDto,
 	userID uuid.UUID,
 ) ([]entities.ShortURL, error) {
 	urls := make([]entities.ShortURL, 0, len(items))
@@ -265,7 +273,7 @@ func (h *ShortenerHandler) saveMultipleToRepository(
 	return h.Repo.CreateMultiple(ctx, urls)
 }
 
-func (h *ShortenerHandler) readBody(w http.ResponseWriter, r *http.Request) (body []byte, doneWithError bool) {
+func (h *Shortener) readBody(w http.ResponseWriter, r *http.Request) (body []byte, doneWithError bool) {
 	urlToEncode, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, config.UnknownError, http.StatusBadRequest)

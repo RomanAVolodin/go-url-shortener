@@ -9,3 +9,17 @@ run:
 test-coverage-console:
 	go test ./...  -coverpkg=./... -coverprofile coverage.out
 	go tool cover -func coverage.out
+
+
+test_bench:
+	go test -bench=. ./...
+
+profiles_diff:
+	go tool pprof -top -diff_base=profiles/base.pprof profiles/result.pprof
+
+get_profile_under_pressure:
+	go tool pprof -http=":9090" -seconds=30 http://localhost:8080/debug/pprof/heap > profile/result.pprof
+
+get_info_from_profile:
+	 go tool pprof -http=":9090" profile/base.pprof
+

@@ -1,13 +1,14 @@
 package utils
 
 import (
-	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
-	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
-	"github.com/stretchr/testify/assert"
 	"log"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/repositories"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSetRepositories(t *testing.T) {
@@ -34,11 +35,6 @@ func TestSetRepositories(t *testing.T) {
 			filepath: "test.json",
 			want:     reflect.TypeOf(&repositories.FileRepository{}).String(),
 		},
-		//{
-		//	name:        "Check postgres",
-		//	databaseDSN: "postgres://shortener:secret@localhost:5432/shortener",
-		//	want:        reflect.TypeOf(&repositories.DatabaseRepository{}).String(),
-		//},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
