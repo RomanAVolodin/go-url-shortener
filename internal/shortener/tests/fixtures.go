@@ -1,3 +1,4 @@
+// Package tests contains fixtures.
 package tests
 
 import (
