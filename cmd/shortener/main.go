@@ -24,7 +24,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/handlers"
@@ -36,5 +35,4 @@ func main() {
 	h := handlers.NewShortener(repo)
 	log.Printf("Server started at %s", config.Settings.ServerAddress)
 	log.Fatal(http.ListenAndServe(config.Settings.ServerAddress, h))
-	os.Exit(0)
 }

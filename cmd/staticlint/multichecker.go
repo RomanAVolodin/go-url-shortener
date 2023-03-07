@@ -1,4 +1,11 @@
-// Package main runs the application.
+// Analyzer set of analyzers for static analysis
+//
+// Contains:
+// contains all analyzers of golang.org/x/tools/go/analysis
+//
+// all analyzers of https://pkg.go.dev/honnef.co/go/tools@v0.4.2/staticcheck and https://pkg.go.dev/honnef.co/go/tools@v0.4.2/stylecheck
+//
+// OsExitAnalyzer - checks for a call os.Exit() in main method.
 package main
 
 import (
@@ -40,20 +47,20 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			continue
 		}
 		ast.Inspect(file, func(node ast.Node) bool {
-			if c, ok := node.(*ast.Package); ok {
-				if c.Name != "main" {
+			if p, ok := node.(*ast.Package); ok {
+				if p.Name != "main" {
 					return true
 				}
 			}
 			if f, ok := node.(*ast.FuncDecl); ok {
 				if f.Name.Name == "main" {
 					for _, stmt := range f.Body.List {
-						if eStmt, ok := stmt.(*ast.ExprStmt); ok {
-							if x, ok := eStmt.X.(*ast.CallExpr); ok {
-								if r, ok := x.Fun.(*ast.SelectorExpr); ok {
-									if a, ok := r.X.(*ast.Ident); ok {
-										if a.Name == "os" && r.Sel.Name == "Exit" {
-											pass.Reportf(a.NamePos, "found os.Exit in main func of package main")
+						if exprStmt, ok := stmt.(*ast.ExprStmt); ok {
+							if callExpr, ok := exprStmt.X.(*ast.CallExpr); ok {
+								if selExpr, ok := callExpr.Fun.(*ast.SelectorExpr); ok {
+									if c, ok := selExpr.X.(*ast.Ident); ok {
+										if c.Name == "os" && selExpr.Sel.Name == "Exit" {
+											pass.Reportf(c.NamePos, "found os.Exit in main func of package main")
 										}
 									}
 								}
