@@ -1,5 +1,5 @@
 # go-musthave-shortener-tpl
-![Coverage](https://img.shields.io/badge/Coverage-73.9%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-72.2%25-brightgreen)
 
 ### Run app 
 
