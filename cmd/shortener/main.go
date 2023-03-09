@@ -19,6 +19,10 @@
 // Database storage:
 //
 //	go run cmd/shortener/main.go -a localhost:8080 -b http://localhost:8080 -f storage.json -d postgres://shortener:secret@localhost:5432/shortener
+//
+// Run with initial flags:
+//
+//	go run -ldflags "-X main.buildVersion=v1.0.1 -X 'main.buildDate=$(date +'%Y/%m/%d %H:%M:%S')' -X 'main.buildCommit=initial commit'" cmd/shortener/main.go -a localhost:8080 -b http://localhost:8080 -f storage.json
 package main
 
 import (
@@ -30,9 +34,15 @@ import (
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/utils"
 )
 
+var buildVersion = "N/A"
+var buildDate = "N/A"
+var buildCommit = "N/A"
+
 func main() {
 	repo := utils.SetRepository()
 	h := handlers.NewShortener(repo)
-	log.Printf("Server started at %s", config.Settings.ServerAddress)
+	log.Printf("Build version: %s", buildVersion)
+	log.Printf("Build date: %s", buildDate)
+	log.Printf("Build commit: %s", buildCommit)
 	log.Fatal(http.ListenAndServe(config.Settings.ServerAddress, h))
 }
