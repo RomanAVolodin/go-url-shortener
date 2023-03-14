@@ -29,6 +29,8 @@ import (
 	"log"
 	"net/http"
 
+	"golang.org/x/crypto/acme/autocert"
+
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/handlers"
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/utils"
@@ -44,5 +46,20 @@ func main() {
 	log.Printf("Build version: %s", buildVersion)
 	log.Printf("Build date: %s", buildDate)
 	log.Printf("Build commit: %s", buildCommit)
-	log.Fatal(http.ListenAndServe(config.Settings.ServerAddress, h))
+	if config.Settings.EnableHTTPS {
+		manager := &autocert.Manager{
+			Cache:      autocert.DirCache("cache-dir"),
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist("my.domain.ru"),
+		}
+		server := &http.Server{
+			Addr:      ":443",
+			Handler:   h,
+			TLSConfig: manager.TLSConfig(),
+		}
+		log.Fatal(server.ListenAndServeTLS("", ""))
+	} else {
+		log.Fatal(http.ListenAndServe(config.Settings.ServerAddress, h))
+	}
+
 }
