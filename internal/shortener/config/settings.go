@@ -29,6 +29,7 @@ type AppSettings struct {
 	SecretAuthKey   string `env:"AUTH_SECRET_KEY"   default:"super_secret"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
 	IsTestMode      bool   `env:"IS_TEST"           default:"false"`
+	EnableHTTPS     bool   `env:"ENABLE_HTTPS"`
 }
 
 // Settings singleton with application configuration, initializes in `init()` method.
@@ -44,6 +45,7 @@ func init() {
 	flagSet.StringVar(&Settings.BaseURL, "b", "http://localhost:8080", "Full featured base url")
 	flagSet.StringVar(&Settings.FileStoragePath, "f", "", "File storage path")
 	flagSet.StringVar(&Settings.DatabaseDSN, "d", "", "Database DSN url")
+	flagSet.BoolVar(&Settings.EnableHTTPS, "s", false, "Enable HTTPs")
 	flagSet.Parse(os.Args[1:])
 
 	err := env.Parse(&Settings)
