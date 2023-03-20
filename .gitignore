@@ -16,6 +16,8 @@ cmd/shortener/main
 cmd/shortener/shortener
 cmd/shortener/shortenertest
 
+cmd/staticlint/multichecker
+
 # Dependency directories (remove the comment below to include it)
 vendor/
 
