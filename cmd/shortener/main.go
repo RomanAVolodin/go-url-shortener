@@ -26,8 +26,13 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"golang.org/x/crypto/acme/autocert"
 
@@ -43,23 +48,40 @@ var buildCommit = "N/A"
 func main() {
 	repo := utils.SetRepository()
 	h := handlers.NewShortener(repo)
-	log.Printf("Build version: %s", buildVersion)
-	log.Printf("Build date: %s", buildDate)
-	log.Printf("Build commit: %s", buildCommit)
-	if config.Settings.EnableHTTPS {
-		manager := &autocert.Manager{
-			Cache:      autocert.DirCache("cache-dir"),
-			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist("my.domain.ru"),
-		}
-		server := &http.Server{
-			Addr:      ":443",
-			Handler:   h,
-			TLSConfig: manager.TLSConfig(),
-		}
-		log.Fatal(server.ListenAndServeTLS("", ""))
-	} else {
-		log.Fatal(http.ListenAndServe(config.Settings.ServerAddress, h))
+
+	manager := &autocert.Manager{
+		Cache:      autocert.DirCache("cache-dir"),
+		Prompt:     autocert.AcceptTOS,
+		HostPolicy: autocert.HostWhitelist("my.domain.ru"),
+	}
+	server := &http.Server{
+		Addr:      ":443",
+		Handler:   h,
+		TLSConfig: manager.TLSConfig(),
 	}
 
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	go func() {
+		log.Printf("Build version: %s", buildVersion)
+		log.Printf("Build date: %s", buildDate)
+		log.Printf("Build commit: %s", buildCommit)
+		if config.Settings.EnableHTTPS {
+			log.Fatal(server.ListenAndServeTLS("", ""))
+		} else {
+			log.Fatal(http.ListenAndServe(config.Settings.ServerAddress, h))
+		}
+	}()
+
+	<-done
+	log.Print("Server Stopped")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatalf("Server Shutdown Failed with error:%+v", err)
+	}
+	log.Print("Server Exited Properly")
 }
