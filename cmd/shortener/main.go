@@ -32,7 +32,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"golang.org/x/crypto/acme/autocert"
 
@@ -46,42 +45,58 @@ var buildDate = "N/A"
 var buildCommit = "N/A"
 
 func main() {
-	repo := utils.SetRepository()
-	h := handlers.NewShortener(repo)
+	ctx, cancelGlobalContext := context.WithCancel(context.Background())
+	defer cancelGlobalContext()
 
-	manager := &autocert.Manager{
-		Cache:      autocert.DirCache("cache-dir"),
-		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist("my.domain.ru"),
-	}
+	repo := utils.SetRepository(ctx)
+
+	handler := handlers.NewShortener(repo)
+
 	server := &http.Server{
-		Addr:      ":443",
-		Handler:   h,
-		TLSConfig: manager.TLSConfig(),
+		Addr:    config.Settings.ServerAddress,
+		Handler: handler,
 	}
 
-	done := make(chan os.Signal, 1)
-	signal.Notify(done, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	idleConnectionsClosed := make(chan struct{})
 
 	go func() {
-		log.Printf("Build version: %s", buildVersion)
-		log.Printf("Build date: %s", buildDate)
-		log.Printf("Build commit: %s", buildCommit)
-		if config.Settings.EnableHTTPS {
-			log.Fatal(server.ListenAndServeTLS("", ""))
-		} else {
-			log.Fatal(http.ListenAndServe(config.Settings.ServerAddress, h))
+		sigint := make(chan os.Signal, 1)
+		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
+		<-sigint
+		log.Println("Start shutting down process")
+
+		if err := server.Shutdown(context.Background()); err != nil {
+			log.Printf("HTTP Server Shutdown error: %v", err)
 		}
+
+		if err := handler.Repo.CloseConnection(); err != nil {
+			log.Printf("Servers Repos closing error: %v", err)
+		}
+
+		cancelGlobalContext()
+		close(idleConnectionsClosed)
 	}()
 
-	<-done
-	log.Print("Server Stopped")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("Server Shutdown Failed with error:%+v", err)
+	log.Printf("Build version: %s", buildVersion)
+	log.Printf("Build date: %s", buildDate)
+	log.Printf("Build commit: %s", buildCommit)
+	if config.Settings.EnableHTTPS {
+		manager := &autocert.Manager{
+			Cache:      autocert.DirCache("cache-dir"),
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist("my.domain.ru"),
+		}
+		server.Addr = ":443"
+		server.TLSConfig = manager.TLSConfig()
+		if err := server.ListenAndServeTLS("", ""); err != http.ErrServerClosed {
+			log.Fatalf("HTTPs server ListenAndServeTLS Error: %v", err)
+		}
+	} else {
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			log.Fatalf("HTTP server ListenAndServe Error: %v", err)
+		}
 	}
-	log.Print("Server Exited Properly")
+
+	<-idleConnectionsClosed
+	log.Printf("Server was closed gracefully!")
 }

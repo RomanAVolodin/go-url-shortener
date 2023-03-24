@@ -14,7 +14,7 @@ import (
 )
 
 // SetRepository is the main method to set type of database to use in application.
-func SetRepository() repositories.IRepository {
+func SetRepository(globalCtx context.Context) repositories.IRepository {
 	if config.Settings.DatabaseDSN != "" {
 		db, err := sql.Open("pgx", config.Settings.DatabaseDSN)
 		if err != nil {
@@ -54,7 +54,7 @@ func SetRepository() repositories.IRepository {
 			Storage:  db,
 			ToDelete: make(chan *entities.ItemToDelete, 16),
 		}
-		go repo.AccumulateRecordsToDelete()
+		go repo.AccumulateRecordsToDelete(globalCtx)
 		return repo
 	}
 	if config.Settings.FileStoragePath != "" {

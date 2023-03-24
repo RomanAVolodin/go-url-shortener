@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"log"
 	"os"
 	"reflect"
@@ -40,7 +41,7 @@ func TestSetRepositories(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			config.Settings.FileStoragePath = tt.filepath
 			config.Settings.DatabaseDSN = tt.databaseDSN
-			got := SetRepository()
+			got := SetRepository(context.Background())
 			assert.Equal(t, reflect.TypeOf(got).String(), tt.want)
 		})
 	}

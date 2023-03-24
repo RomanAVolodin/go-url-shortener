@@ -37,16 +37,16 @@ type AppSettings struct {
 // Settings singleton with application configuration, initializes in `init()` method.
 var Settings AppSettings
 
-func parseConfigFile(settings *AppSettings) {
+func parseConfigFile(settings *AppSettings) error {
 	var config AppSettings
 	file, err := os.ReadFile(settings.ConfigFile)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = json.Unmarshal(file, &config)
 	if err != nil {
-		return
+		return err
 	}
 
 	if settings.ServerAddress == "" {
@@ -64,6 +64,7 @@ func parseConfigFile(settings *AppSettings) {
 	if !settings.EnableHTTPS {
 		settings.EnableHTTPS = config.EnableHTTPS
 	}
+	return nil
 }
 
 func init() {
@@ -82,7 +83,10 @@ func init() {
 	flagSet.Parse(os.Args[1:])
 
 	if Settings.ConfigFile != "" {
-		parseConfigFile(&Settings)
+		err := parseConfigFile(&Settings)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	err := env.Parse(&Settings)

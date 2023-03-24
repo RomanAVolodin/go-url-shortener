@@ -71,3 +71,8 @@ func (repo *InMemoryRepository) DeleteRecords(ctx context.Context, userID uuid.U
 	lock.Unlock()
 	return nil
 }
+
+// CloseConnection closes storage connection on request
+func (repo *InMemoryRepository) CloseConnection() error {
+	return nil
+}
