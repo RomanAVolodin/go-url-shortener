@@ -166,26 +166,32 @@ func (repo *DatabaseRepository) DeleteRecords(ctx context.Context, userID uuid.U
 }
 
 // AccumulateRecordsToDelete accumulates ShortURLs to delete in background.
-func (repo *DatabaseRepository) AccumulateRecordsToDelete() {
+func (repo *DatabaseRepository) AccumulateRecordsToDelete(globalCtx context.Context) {
 	ticker := time.NewTicker(time.Millisecond * 500)
 	defer ticker.Stop()
 
 	localStorage := make(map[uuid.UUID][]string)
 
 	go func() {
-		for range ticker.C {
-			lockURLToDeleteStorage.Lock()
-			for userID, ids := range localStorage {
-				err := repo.DeleteRecordsForUser(context.Background(), userID, ids)
-				if err != nil {
-					repo.ToDelete <- &entities.ItemToDelete{
-						UserID:   userID,
-						ItemsIDs: ids,
+		for {
+			select {
+			case <-ticker.C:
+				lockURLToDeleteStorage.Lock()
+				for userID, ids := range localStorage {
+					err := repo.DeleteRecordsForUser(context.Background(), userID, ids)
+					if err != nil {
+						repo.ToDelete <- &entities.ItemToDelete{
+							UserID:   userID,
+							ItemsIDs: ids,
+						}
 					}
+					delete(localStorage, userID)
 				}
-				delete(localStorage, userID)
+				lockURLToDeleteStorage.Unlock()
+			case <-globalCtx.Done():
+				log.Println("Finishing Accumulating coroutine")
+				return
 			}
-			lockURLToDeleteStorage.Unlock()
 		}
 	}()
 
@@ -215,4 +221,9 @@ func (repo *DatabaseRepository) DeleteRecordsForUser(ctx context.Context, userID
 		args...,
 	)
 	return err
+}
+
+// CloseConnection closes database connection on request
+func (repo *DatabaseRepository) CloseConnection() error {
+	return repo.Storage.Close()
 }

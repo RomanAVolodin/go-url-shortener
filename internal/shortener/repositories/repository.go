@@ -15,4 +15,5 @@ type IRepository interface {
 	Create(ctx context.Context, shortURL entities.ShortURL) (entities.ShortURL, error)
 	CreateMultiple(ctx context.Context, urls []entities.ShortURL) ([]entities.ShortURL, error)
 	DeleteRecords(ctx context.Context, userID uuid.UUID, ids []string) error
+	CloseConnection() error
 }

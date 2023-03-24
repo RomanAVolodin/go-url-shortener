@@ -134,6 +134,11 @@ func (repo *FileRepository) Restore() error {
 	return nil
 }
 
+// CloseConnection closes storage connection on request
+func (repo *FileRepository) CloseConnection() error {
+	return nil
+}
+
 // openStorageFile opens storage file.
 func (repo *FileRepository) openStorageFile() (*os.File, error) {
 	file, err := os.OpenFile(repo.FilePath, os.O_RDWR|os.O_CREATE, 0777)
