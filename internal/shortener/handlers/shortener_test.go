@@ -253,6 +253,7 @@ func TestShortURLHandler(t *testing.T) {
 				assert.Equal(t, tt.wantedResult.exactResponse, strings.Trim(string(resBody), "\n"))
 			}
 			if tt.wantedResult.responseStartWith != "" {
+				fmt.Println("---------->", string(resBody))
 				assert.True(
 					t,
 					strings.HasPrefix(strings.Trim(string(resBody), "\n"), tt.wantedResult.responseStartWith),

@@ -26,8 +26,12 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"golang.org/x/crypto/acme/autocert"
 
@@ -41,25 +45,59 @@ var buildDate = "N/A"
 var buildCommit = "N/A"
 
 func main() {
-	repo := utils.SetRepository()
-	h := handlers.NewShortener(repo)
+	ctx, cancelGlobalContext := context.WithCancel(context.Background())
+	defer cancelGlobalContext()
+
+	repo := utils.SetRepository(ctx)
+
+	handler := handlers.NewShortener(repo)
+
+	server := &http.Server{
+		Addr:    config.Settings.ServerAddress,
+		Handler: handler,
+	}
+
+	idleConnectionsClosed := make(chan struct{})
+
+	go func() {
+		sigint := make(chan os.Signal, 1)
+		signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
+		<-sigint
+		log.Println("Start shutting down process")
+
+		if err := server.Shutdown(context.Background()); err != nil {
+			log.Printf("HTTP Server Shutdown error: %v", err)
+		}
+
+		if err := handler.Repo.CloseConnection(); err != nil {
+			log.Printf("Servers Repos closing error: %v", err)
+		}
+
+		cancelGlobalContext()
+		close(idleConnectionsClosed)
+	}()
+
 	log.Printf("Build version: %s", buildVersion)
 	log.Printf("Build date: %s", buildDate)
 	log.Printf("Build commit: %s", buildCommit)
+	log.Printf("Trusted subnet: %s", config.Settings.TrustedSubnet)
 	if config.Settings.EnableHTTPS {
 		manager := &autocert.Manager{
 			Cache:      autocert.DirCache("cache-dir"),
 			Prompt:     autocert.AcceptTOS,
 			HostPolicy: autocert.HostWhitelist("my.domain.ru"),
 		}
-		server := &http.Server{
-			Addr:      ":443",
-			Handler:   h,
-			TLSConfig: manager.TLSConfig(),
+		server.Addr = ":443"
+		server.TLSConfig = manager.TLSConfig()
+		if err := server.ListenAndServeTLS("", ""); err != http.ErrServerClosed {
+			log.Fatalf("HTTPs server ListenAndServeTLS Error: %v", err)
 		}
-		log.Fatal(server.ListenAndServeTLS("", ""))
 	} else {
-		log.Fatal(http.ListenAndServe(config.Settings.ServerAddress, h))
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			log.Fatalf("HTTP server ListenAndServe Error: %v", err)
+		}
 	}
 
+	<-idleConnectionsClosed
+	log.Printf("Server was closed gracefully!")
 }
