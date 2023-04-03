@@ -229,9 +229,9 @@ func (h *Shortener) GetServiceStats(
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-	urlsAmount, err := h.Repo.GetOverallURLsAmount(r.Context())
-	usersAmount, err := h.Repo.GetOverallUsersAmount(r.Context())
-	if err != nil {
+	urlsAmount, errURL := h.Repo.GetOverallURLsAmount(r.Context())
+	usersAmount, errUser := h.Repo.GetOverallUsersAmount(r.Context())
+	if errURL != nil || errUser != nil {
 		http.Error(w, config.UnknownError, http.StatusBadRequest)
 		return
 	}
