@@ -227,3 +227,31 @@ func (repo *DatabaseRepository) DeleteRecordsForUser(ctx context.Context, userID
 func (repo *DatabaseRepository) CloseConnection() error {
 	return repo.Storage.Close()
 }
+
+// GetOverallURLsAmount gets amount of urls.
+func (repo *DatabaseRepository) GetOverallURLsAmount(ctx context.Context) (int, error) {
+	var count int
+	row := repo.Storage.QueryRowContext(
+		ctx,
+		"SELECT COUNT(DISTINCT original_url) FROM short_urls",
+	)
+	err := row.Scan(&count)
+	if err != nil {
+		return count, err
+	}
+	return count, nil
+}
+
+// GetOverallUsersAmount gets amount of users.
+func (repo *DatabaseRepository) GetOverallUsersAmount(ctx context.Context) (int, error) {
+	var count int
+	row := repo.Storage.QueryRowContext(
+		ctx,
+		"SELECT COUNT(DISTINCT user_id) FROM short_urls",
+	)
+	err := row.Scan(&count)
+	if err != nil {
+		return count, err
+	}
+	return count, nil
+}

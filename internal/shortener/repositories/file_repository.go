@@ -139,6 +139,24 @@ func (repo *FileRepository) CloseConnection() error {
 	return nil
 }
 
+// GetOverallURLsAmount gets amount of urls.
+func (repo *FileRepository) GetOverallURLsAmount(ctx context.Context) (int, error) {
+	result := make(map[string]bool, len(repo.Storage))
+	for _, item := range repo.Storage {
+		result[item.Original] = true
+	}
+	return len(result), nil
+}
+
+// GetOverallUsersAmount gets amount of users.
+func (repo *FileRepository) GetOverallUsersAmount(ctx context.Context) (int, error) {
+	result := make(map[uuid.UUID]bool, len(repo.Storage))
+	for _, item := range repo.Storage {
+		result[item.UserID] = true
+	}
+	return len(result), nil
+}
+
 // openStorageFile opens storage file.
 func (repo *FileRepository) openStorageFile() (*os.File, error) {
 	file, err := os.OpenFile(repo.FilePath, os.O_RDWR|os.O_CREATE, 0777)

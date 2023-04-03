@@ -80,6 +80,7 @@ func main() {
 	log.Printf("Build version: %s", buildVersion)
 	log.Printf("Build date: %s", buildDate)
 	log.Printf("Build commit: %s", buildCommit)
+	log.Printf("Trusted subnet: %s", config.Settings.TrustedSubnet)
 	if config.Settings.EnableHTTPS {
 		manager := &autocert.Manager{
 			Cache:      autocert.DirCache("cache-dir"),

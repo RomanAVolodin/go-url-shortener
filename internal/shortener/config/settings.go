@@ -29,8 +29,9 @@ type AppSettings struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH" json:"file_storage_path"`
 	SecretAuthKey   string `env:"AUTH_SECRET_KEY"   default:"super_secret"`
 	DatabaseDSN     string `env:"DATABASE_DSN"      json:"database_dsn"`
-	IsTestMode      bool   `env:"IS_TEST"           default:"false"`
+	IsTestMode      bool   `env:"IS_TEST"           json:"-" default:"false"`
 	EnableHTTPS     bool   `env:"ENABLE_HTTPS"      json:"enable_https"`
+	TrustedSubnet   string `env:"TRUSTED_SUBNET"    json:"trusted_subnet"`
 	ConfigFile      string `env:"CONFIG"`
 }
 
@@ -61,6 +62,9 @@ func parseConfigFile(settings *AppSettings) error {
 	if settings.DatabaseDSN == "" {
 		settings.DatabaseDSN = config.DatabaseDSN
 	}
+	if settings.TrustedSubnet == "" {
+		settings.TrustedSubnet = config.TrustedSubnet
+	}
 	if !settings.EnableHTTPS {
 		settings.EnableHTTPS = config.EnableHTTPS
 	}
@@ -79,6 +83,8 @@ func init() {
 	flagSet.StringVar(&Settings.DatabaseDSN, "d", "", "Database DSN url")
 	flagSet.BoolVar(&Settings.EnableHTTPS, "s", false, "Enable HTTPs")
 	flagSet.StringVar(&Settings.ConfigFile, "c", "", "Config file location")
+	flagSet.StringVar(&Settings.TrustedSubnet, "t", "127.0.0.1/32", "Trusted subnet")
+
 	flagSet.StringVar(&Settings.ConfigFile, "config", "", "Config file location")
 	flagSet.Parse(os.Args[1:])
 
