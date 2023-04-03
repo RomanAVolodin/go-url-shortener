@@ -37,6 +37,7 @@ type AppSettings struct {
 // Settings singleton with application configuration, initializes in `init()` method.
 var Settings AppSettings
 
+// ParseConfigFile config file parser.
 func ParseConfigFile(settings *AppSettings) error {
 	var config AppSettings
 	file, err := os.ReadFile(settings.ConfigFile)
