@@ -235,14 +235,13 @@ func (h *Shortener) GetServiceStats(
 		http.Error(w, config.UnknownError, http.StatusBadRequest)
 		return
 	}
-
 	jsonResponse, err := json.Marshal(map[string]int{"urls": urlsAmount, "users": usersAmount})
 	if err != nil {
 		http.Error(w, config.UnknownError, http.StatusBadRequest)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusOK)
 	w.Write(jsonResponse)
 }
 

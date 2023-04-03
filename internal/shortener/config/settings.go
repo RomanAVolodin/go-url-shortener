@@ -18,7 +18,6 @@ const (
 	BadInputData                   = "Incorrect request body data"
 	UnknownError                   = "Something bad's happened"
 	NoURLFoundByID                 = "No url found by id"
-	NoUserIDProvided               = "No user ID has been provided"
 	NoConnectionToDatabase         = "Error while connecting to database"
 )
 
@@ -38,7 +37,7 @@ type AppSettings struct {
 // Settings singleton with application configuration, initializes in `init()` method.
 var Settings AppSettings
 
-func parseConfigFile(settings *AppSettings) error {
+func ParseConfigFile(settings *AppSettings) error {
 	var config AppSettings
 	file, err := os.ReadFile(settings.ConfigFile)
 	if err != nil {
@@ -89,7 +88,7 @@ func init() {
 	flagSet.Parse(os.Args[1:])
 
 	if Settings.ConfigFile != "" {
-		err := parseConfigFile(&Settings)
+		err := ParseConfigFile(&Settings)
 		if err != nil {
 			log.Fatal(err)
 		}

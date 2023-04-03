@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"compress/gzip"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -253,7 +256,6 @@ func TestShortURLHandler(t *testing.T) {
 				assert.Equal(t, tt.wantedResult.exactResponse, strings.Trim(string(resBody), "\n"))
 			}
 			if tt.wantedResult.responseStartWith != "" {
-				fmt.Println("---------->", string(resBody))
 				assert.True(
 					t,
 					strings.HasPrefix(strings.Trim(string(resBody), "\n"), tt.wantedResult.responseStartWith),
@@ -441,6 +443,7 @@ func TestDatabaseRepository(t *testing.T) {
 	}
 	tests := []struct {
 		name       string
+		userIP     string
 		urlString  string
 		bodyString string
 		method     string
@@ -583,6 +586,29 @@ func TestDatabaseRepository(t *testing.T) {
 			},
 			wanted: wanted{code: http.StatusAccepted},
 		},
+		{
+			name:      "Get statistics",
+			urlString: "/api/internal/stats",
+			method:    http.MethodGet,
+			userIP:    "127.0.0.1",
+			expect: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery("SELECT").
+					WillReturnRows(
+						sqlmock.NewRows([]string{"amount"}).
+							AddRow(
+								1,
+							),
+					)
+				mock.ExpectQuery("SELECT").
+					WillReturnRows(
+						sqlmock.NewRows([]string{"amount"}).
+							AddRow(
+								1,
+							),
+					)
+			},
+			wanted: wanted{code: http.StatusOK},
+		},
 	}
 
 	for _, tt := range tests {
@@ -602,8 +628,12 @@ func TestDatabaseRepository(t *testing.T) {
 				request = httptest.NewRequest(tt.method, tt.urlString, nil)
 			}
 			request.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
+			if tt.userIP != "" {
+				request.Header.Set("X-Real-IP", tt.userIP)
+			}
 
-			repo := repositories.DatabaseRepository{Storage: db}
+			toDelete := make(chan *entities.ItemToDelete)
+			repo := repositories.DatabaseRepository{Storage: db, ToDelete: toDelete}
 
 			w := httptest.NewRecorder()
 			h := NewShortener(&repo)
@@ -680,6 +710,120 @@ func BenchmarkNewShortenerHandler(b *testing.B) {
 				res := w.Result()
 				res.Body.Close()
 			}
+		})
+	}
+}
+
+func TestConfigFileUsage(t *testing.T) {
+	defer func() {
+		err := os.Remove("test.json")
+		if err != nil {
+			log.Println(err)
+		}
+	}()
+	var settingsToCompare config.AppSettings
+	var settings config.AppSettings
+	settings.TrustedSubnet = "192.168.0.1/24"
+
+	file, err := os.OpenFile("test.json", os.O_RDWR|os.O_CREATE, 0777)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", " ")
+	if err = encoder.Encode(&settings); err != nil {
+		log.Println(err)
+		return
+	}
+
+	settingsToCompare.ConfigFile = "test.json"
+	config.ParseConfigFile(&settingsToCompare)
+
+	assert.Equal(t, settings.TrustedSubnet, settingsToCompare.TrustedSubnet)
+
+	settingsToCompare.ConfigFile = "test_failed.json"
+	errParse := config.ParseConfigFile(&settingsToCompare)
+	assert.Error(t, errParse)
+}
+
+func TestStatEndpoint(t *testing.T) {
+	type wanted struct {
+		code              int
+		exactResponse     string
+		responseStartWith string
+		locationHeader    string
+	}
+	tests := []struct {
+		name         string
+		requestURL   string
+		requestType  string
+		requestBody  string
+		userIP       string
+		repo         repositories.IRepository
+		wantedResult wanted
+	}{
+		{
+			name:        "JSON URL link should be generated",
+			requestType: http.MethodGet,
+			requestURL:  "/api/internal/stats",
+			repo:        &repositories.InMemoryRepository{Storage: make(map[string]entities.ShortURL)},
+			userIP:      "",
+			wantedResult: wanted{
+				code: http.StatusForbidden,
+			},
+		},
+		{
+			name:        "JSON URL link should be generated",
+			requestType: http.MethodGet,
+			requestURL:  "/api/internal/stats",
+			repo:        &repositories.InMemoryRepository{Storage: map[string]entities.ShortURL{tLoc.ShortURLFixture.ID: tLoc.ShortURLFixture}},
+			userIP:      "192.168.0.12",
+			wantedResult: wanted{
+				code:              http.StatusOK,
+				responseStartWith: "{\"urls\":",
+			},
+		},
+		{
+			name:        "Get service statistics failed",
+			requestURL:  "/api/internal/stats",
+			requestType: http.MethodGet,
+			repo: &repositories.FileRepository{
+				Storage:  map[string]entities.ShortURL{tLoc.ShortURLFixture.ID: tLoc.ShortURLFixture},
+				FilePath: "test.json",
+			},
+			userIP: "192.168.0.12",
+			wantedResult: wanted{
+				code: http.StatusOK,
+			},
+		},
+	}
+	config.Settings.TrustedSubnet = "192.168.0.0/24"
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var request *http.Request
+			request = httptest.NewRequest(tt.requestType, tt.requestURL, nil)
+			request.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
+			if tt.userIP != "" {
+				request.Header.Set("X-Real-IP", tt.userIP)
+			}
+
+			w := httptest.NewRecorder()
+			h := NewShortener(tt.repo)
+
+			h.ServeHTTP(w, request)
+			res := w.Result()
+			defer res.Body.Close()
+
+			resBody, err := io.ReadAll(res.Body)
+
+			assert.Equal(t, tt.wantedResult.code, res.StatusCode)
+			assert.Nil(t, err)
+
+			assert.True(
+				t,
+				strings.HasPrefix(strings.Trim(string(resBody), "\n"), tt.wantedResult.responseStartWith),
+			)
 		})
 	}
 }

@@ -27,6 +27,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -82,6 +83,7 @@ func main() {
 	log.Printf("Build commit: %s", buildCommit)
 	log.Printf("Trusted subnet: %s", config.Settings.TrustedSubnet)
 	if config.Settings.EnableHTTPS {
+		fmt.Println("Starting HTTPS server")
 		manager := &autocert.Manager{
 			Cache:      autocert.DirCache("cache-dir"),
 			Prompt:     autocert.AcceptTOS,
@@ -93,6 +95,7 @@ func main() {
 			log.Fatalf("HTTPs server ListenAndServeTLS Error: %v", err)
 		}
 	} else {
+		fmt.Println("Starting insecure server")
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			log.Fatalf("HTTP server ListenAndServe Error: %v", err)
 		}

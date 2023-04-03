@@ -233,7 +233,7 @@ func (repo *DatabaseRepository) GetOverallURLsAmount(ctx context.Context) (int, 
 	var count int
 	row := repo.Storage.QueryRowContext(
 		ctx,
-		"SELECT COUNT(DISTINCT original_url) FROM short_urls",
+		"SELECT COUNT(DISTINCT original_url) as amount FROM short_urls",
 	)
 	err := row.Scan(&count)
 	if err != nil {
@@ -247,7 +247,7 @@ func (repo *DatabaseRepository) GetOverallUsersAmount(ctx context.Context) (int,
 	var count int
 	row := repo.Storage.QueryRowContext(
 		ctx,
-		"SELECT COUNT(DISTINCT user_id) FROM short_urls",
+		"SELECT COUNT(DISTINCT user_id) as amount FROM short_urls",
 	)
 	err := row.Scan(&count)
 	if err != nil {
