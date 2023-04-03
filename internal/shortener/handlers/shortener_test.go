@@ -801,8 +801,7 @@ func TestStatEndpoint(t *testing.T) {
 	config.Settings.TrustedSubnet = "192.168.0.0/24"
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var request *http.Request
-			request = httptest.NewRequest(tt.requestType, tt.requestURL, nil)
+			request := httptest.NewRequest(tt.requestType, tt.requestURL, nil)
 			request.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
 			if tt.userIP != "" {
 				request.Header.Set("X-Real-IP", tt.userIP)

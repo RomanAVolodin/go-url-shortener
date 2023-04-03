@@ -65,6 +65,7 @@ func TestSetRepositories(t *testing.T) {
 			assert.Equal(t, reflect.TypeOf(got).String(), tt.want)
 			got.DeleteRecords(context.Background(), uuid.New(), []string{uuid.New().String(), uuid.New().String()})
 			time.Sleep(time.Second)
+			got.CloseConnection()
 		})
 	}
 }
