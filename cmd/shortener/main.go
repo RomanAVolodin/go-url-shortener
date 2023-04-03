@@ -89,7 +89,7 @@ func main() {
 			Prompt:     autocert.AcceptTOS,
 			HostPolicy: autocert.HostWhitelist("my.domain.ru"),
 		}
-		server.Addr = ":443"
+		server.Addr = ":4443"
 		server.TLSConfig = manager.TLSConfig()
 		if err := server.ListenAndServeTLS("", ""); err != http.ErrServerClosed {
 			log.Fatalf("HTTPs server ListenAndServeTLS Error: %v", err)
