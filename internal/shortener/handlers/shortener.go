@@ -41,6 +41,7 @@ func NewShortener(repo repo.IRepository) *Shortener {
 	h.Post("/api/shorten/batch", h.CreateMultipleShortURLHandler)
 	h.Get("/api/user/urls", h.GetUsersRecordsHandler)
 	h.Delete("/api/user/urls", h.DeleteRecordsHandler)
+	h.Get("/api/internal/stats", h.GetServiceStats)
 	h.Get("/ping", h.PingDatabase)
 	h.MethodNotAllowed(func(writer http.ResponseWriter, request *http.Request) {
 		http.Error(writer, config.OnlyGetPostRequestAllowedError, http.StatusMethodNotAllowed)
