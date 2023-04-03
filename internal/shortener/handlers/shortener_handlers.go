@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"time"
 
@@ -215,6 +216,33 @@ func (h *Shortener) DeleteRecordsHandler(
 	}
 
 	w.WriteHeader(http.StatusAccepted)
+}
+
+// GetServiceStats returns the statistics.
+func (h *Shortener) GetServiceStats(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	_, network, err := net.ParseCIDR(config.Settings.TrustedSubnet)
+	userIP := net.ParseIP(r.Header.Get("X-Real-IP"))
+	if err == nil && !network.Contains(userIP) {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	urlsAmount, errURL := h.Repo.GetOverallURLsAmount(r.Context())
+	usersAmount, errUser := h.Repo.GetOverallUsersAmount(r.Context())
+	if errURL != nil || errUser != nil {
+		http.Error(w, config.UnknownError, http.StatusBadRequest)
+		return
+	}
+	jsonResponse, err := json.Marshal(map[string]int{"urls": urlsAmount, "users": usersAmount})
+	if err != nil {
+		http.Error(w, config.UnknownError, http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonResponse)
 }
 
 func (h *Shortener) deleteFromRepository(
