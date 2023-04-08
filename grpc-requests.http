@@ -1,0 +1,68 @@
+
+###
+GRPC 127.0.0.1:3200/proto.Shortener/CreateURL
+
+{
+  "url": "https://roman.ru"
+}
+
+<> 2023-04-05T172934.OK.json
+
+
+###
+GRPC localhost:3200/proto.Shortener/RetrieveURL
+
+{
+  "id": "QEaaz9DYRmrEkr9Zx8koLc"
+}
+
+<> 2023-04-05T172946.OK.json
+
+
+###
+GRPC localhost:3200/proto.Shortener/CreateMultipleURLs
+
+{
+  "urls": [
+    {
+      "correlation_id": "97892036-cb8e-45ca-bc22-add747c970ef",
+      "original_url": "http://2xepnobhj1232.biz"
+    },
+    {
+      "correlation_id": "bd2fc952-7d60-4351-ab8f-8a2f878aa05a",
+      "original_url": "http://2rra6nzj2.yandex"
+    }
+  ]
+}
+
+<> 2023-04-06T111529.OK.json
+
+
+###
+GRPC localhost:3200/proto.Shortener/PingDatabase
+
+<> 2023-04-08T133122.OK.json
+
+###
+GRPC localhost:3200/proto.Shortener/GetServiceStats
+
+<> 2023-04-08T133148.OK.json
+
+###
+GRPC localhost:3200/proto.Shortener/DeleteRecords
+
+{
+  "id": [
+    "zhbZW9Gr8Ffex8e3NBnjd7",
+    "gjTbAf2pYzyZF4vvg5YWHS",
+    "nRSKAu77ejkSE7PXWsZoG8"
+  ]
+}
+
+<> 2023-04-08T133220.OK.json
+
+###
+GRPC localhost:3200/proto.Shortener/GetUsersRecords
+
+<> 2023-04-08T133251.OK.json
+
