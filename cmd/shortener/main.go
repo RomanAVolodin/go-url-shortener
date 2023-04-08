@@ -29,10 +29,16 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+
+	pb "github.com/RomanAVolodin/go-url-shortener/internal/shortener/proto"
+	"google.golang.org/grpc"
+
+	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/handlers/grpcserver"
 
 	"golang.org/x/crypto/acme/autocert"
 
@@ -58,6 +64,21 @@ func main() {
 		Handler: handler,
 	}
 
+	listen, err := net.Listen("tcp", config.Settings.GrpcPort)
+	if err != nil {
+		log.Fatal(err)
+	}
+	gRPCServer := grpc.NewServer(grpc.UnaryInterceptor(grpcserver.UnaryUserIDInterceptor))
+
+	pb.RegisterShortenerServer(gRPCServer, &grpcserver.ShortenerGrpc{Shortener: &handlers.Shortener{Repo: repo}})
+	// starts instance of gRPC server
+	go func() {
+		log.Println("Server gRPC has been started")
+		if err := gRPCServer.Serve(listen); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
 	idleConnectionsClosed := make(chan struct{})
 
 	go func() {
@@ -73,6 +94,9 @@ func main() {
 		if err := handler.Repo.CloseConnection(); err != nil {
 			log.Printf("Servers Repos closing error: %v", err)
 		}
+
+		gRPCServer.GracefulStop()
+		log.Println("Server gRPC is stopped")
 
 		cancelGlobalContext()
 		close(idleConnectionsClosed)

@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "internal/shortener/proto";
+
+message CreateShortURLSimpleRequest {
+  string url = 1;
+}
+
+message CreateShortURLSimpleResponse {
+  string result = 1;
+}
+
+message RetrieveShortURLByIDRequest {
+  string id = 1;
+}
+
+message RetrieveShortURLByIDResponse {
+  string original_url = 1;
+}
+
+message CreateURLsWithCorrelationRequest  {
+  string correlation_id = 1;
+  string original_url = 2;
+}
+
+message CreateURLsWithCorrelationResponse  {
+  string correlation_id = 1;
+  string short_url = 2;
+}
+
+message CreateMultipleRequest {
+  repeated CreateURLsWithCorrelationRequest urls = 1;
+}
+
+message CreateMultipleResponse {
+  repeated CreateURLsWithCorrelationResponse result = 1;
+}
+
+message GetUsersRecordsRequest {}
+
+message GetUsersRecordsResponse{
+  repeated UrlResponse urls = 1;
+}
+
+message UrlResponse {
+  string short_url = 1;
+  string original_url = 2;
+}
+
+message DeleteRecordsRequest {
+  repeated string id = 1;
+}
+
+message DeleteRecordsResponse {}
+
+message GetServiceStatsRequest {}
+message GetServiceStatsResponse {
+  uint32 urls = 1;
+  uint32 users = 2;
+}
+
+message PingDbRequest {}
+message PingDbResponse {}
+
+service Shortener {
+  rpc CreateURL(CreateShortURLSimpleRequest) returns (CreateShortURLSimpleResponse);
+  rpc RetrieveURL(RetrieveShortURLByIDRequest) returns (RetrieveShortURLByIDResponse);
+  rpc CreateMultipleURLs(CreateMultipleRequest) returns (CreateMultipleResponse);
+  rpc GetUsersRecords(GetUsersRecordsRequest) returns (GetUsersRecordsResponse);
+  rpc DeleteRecords(DeleteRecordsRequest) returns (DeleteRecordsResponse);
+  rpc GetServiceStats(GetServiceStatsRequest) returns (GetServiceStatsResponse);
+  rpc PingDatabase(PingDbRequest) returns (PingDbResponse);
+}

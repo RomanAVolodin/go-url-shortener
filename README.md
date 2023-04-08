@@ -14,6 +14,9 @@ go run cmd/shortener/main.go -a localhost:8080 -b http://localhost:8080 -f stora
 ./cmd/shortener/shortenertest -test.v -test.run=^TestIteration13$ -binary-path=cmd/shortener/shortener -source-path=./ -database-dsn=postgres://shortener:secret@localhost:5432/shortener
 ```
 
+```bash
+protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative internal/shortener/proto/shortener.proto
+```
 Шаблон репозитория для практического трек "Веб-разработка на Go"
 
 # Начало работы

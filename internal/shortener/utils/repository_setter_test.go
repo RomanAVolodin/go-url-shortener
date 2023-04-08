@@ -33,6 +33,7 @@ func TestSetRepositories(t *testing.T) {
 		name        string
 		filepath    string
 		databaseDSN string
+		isTestMode  bool
 		want        string
 	}{
 		{

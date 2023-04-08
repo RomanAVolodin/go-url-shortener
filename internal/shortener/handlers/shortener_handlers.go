@@ -39,7 +39,7 @@ func (h *Shortener) CreateJSONShortURLHandler(
 
 	userID := r.Context().Value(middlewares.UserIDKey).(uuid.UUID)
 
-	shortURL, statusCode, err := h.saveToRepository(r.Context(), createDTO.URL, userID)
+	shortURL, statusCode, err := h.SaveToRepository(r.Context(), createDTO.URL, userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -73,7 +73,7 @@ func (h *Shortener) CreateMultipleShortURLHandler(
 
 	userID := r.Context().Value(middlewares.UserIDKey).(uuid.UUID)
 
-	items, err := h.saveMultipleToRepository(r.Context(), incomingDTOs, userID)
+	items, err := h.SaveMultipleToRepository(r.Context(), incomingDTOs, userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -104,7 +104,7 @@ func (h *Shortener) CreateShortURLHandler(
 
 	userID := r.Context().Value(middlewares.UserIDKey).(uuid.UUID)
 
-	shortURL, statusCode, err := h.saveToRepository(r.Context(), string(urlToEncode), userID)
+	shortURL, statusCode, err := h.SaveToRepository(r.Context(), string(urlToEncode), userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -176,15 +176,7 @@ func (h *Shortener) GetUsersRecordsHandler(
 
 // PingDatabase returns Database connection status
 func (h *Shortener) PingDatabase(w http.ResponseWriter, r *http.Request) {
-	if repo, ok := h.Repo.(*repositories.DatabaseRepository); ok {
-		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
-		defer cancel()
-
-		if err := repo.Storage.PingContext(ctx); err != nil {
-			http.Error(w, config.NoConnectionToDatabase, http.StatusInternalServerError)
-			return
-		}
-
+	if err := h.CheckDatabase(r.Context()); err == nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		return
@@ -209,7 +201,7 @@ func (h *Shortener) DeleteRecordsHandler(
 
 	userID := r.Context().Value(middlewares.UserIDKey).(uuid.UUID)
 
-	err := h.deleteFromRepository(r.Context(), idsToDelete, userID)
+	err := h.DeleteFromRepository(r.Context(), idsToDelete, userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -245,7 +237,8 @@ func (h *Shortener) GetServiceStats(
 	w.Write(jsonResponse)
 }
 
-func (h *Shortener) deleteFromRepository(
+// DeleteFromRepository deletes records from repo.
+func (h *Shortener) DeleteFromRepository(
 	ctx context.Context,
 	ids []string,
 	userID uuid.UUID,
@@ -253,7 +246,8 @@ func (h *Shortener) deleteFromRepository(
 	return h.Repo.DeleteRecords(ctx, userID, ids)
 }
 
-func (h *Shortener) saveToRepository(
+// SaveToRepository saves records to repo.
+func (h *Shortener) SaveToRepository(
 	ctx context.Context,
 	urlToEncode string,
 	userID uuid.UUID,
@@ -280,7 +274,8 @@ func (h *Shortener) saveToRepository(
 	return url, statusCode, nil
 }
 
-func (h *Shortener) saveMultipleToRepository(
+// SaveMultipleToRepository saves multiple records to repo.
+func (h *Shortener) SaveMultipleToRepository(
 	ctx context.Context,
 	items []entities.ShortURLWithCorrelationCreateDto,
 	userID uuid.UUID,
@@ -299,6 +294,19 @@ func (h *Shortener) saveMultipleToRepository(
 		urls = append(urls, shortURL)
 	}
 	return h.Repo.CreateMultiple(ctx, urls)
+}
+
+// CheckDatabase checks database.
+func (h *Shortener) CheckDatabase(ctx context.Context) error {
+	if repo, ok := h.Repo.(*repositories.DatabaseRepository); ok {
+		ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		defer cancel()
+		if err := repo.Storage.PingContext(ctx); err != nil {
+			return errors.New(config.NoConnectionToDatabase)
+		}
+		return nil
+	}
+	return errors.New(config.NoConnectionToDatabase)
 }
 
 func (h *Shortener) readBody(w http.ResponseWriter, r *http.Request) (body []byte, doneWithError bool) {

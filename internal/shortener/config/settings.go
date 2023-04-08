@@ -13,12 +13,12 @@ import (
 
 // Constants for error responses.
 const (
-	OnlyGetPostRequestAllowedError = "Only GET/POST requests allowed"
-	RequestBodyEmptyError          = "Request body is empty"
-	BadInputData                   = "Incorrect request body data"
-	UnknownError                   = "Something bad's happened"
-	NoURLFoundByID                 = "No url found by id"
-	NoConnectionToDatabase         = "Error while connecting to database"
+	OnlyGetPostRequestAllowedError = "only GET/POST requests allowed"
+	RequestBodyEmptyError          = "request body is empty"
+	BadInputData                   = "incorrect request body data"
+	UnknownError                   = "something bad's happened"
+	NoURLFoundByID                 = "no url found by id"
+	NoConnectionToDatabase         = "error while connecting to database"
 )
 
 // AppSettings struct to handle application settings parsed from environment variables.
@@ -32,6 +32,7 @@ type AppSettings struct {
 	EnableHTTPS     bool   `env:"ENABLE_HTTPS"      json:"enable_https"`
 	TrustedSubnet   string `env:"TRUSTED_SUBNET"    json:"trusted_subnet"`
 	ConfigFile      string `env:"CONFIG"`
+	GrpcPort        string `env:"GRPC_SERVER_ADDRESS"    json:"grpc_server_address" default:":3200"`
 }
 
 // Settings singleton with application configuration, initializes in `init()` method.
