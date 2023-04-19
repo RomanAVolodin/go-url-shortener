@@ -27,3 +27,4 @@ vendor/
 storages
 coverage*
 storage.json*
+config.json

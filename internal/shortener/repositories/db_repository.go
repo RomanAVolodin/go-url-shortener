@@ -22,8 +22,17 @@ type DatabaseRepository struct {
 	ToDelete chan *entities.ItemToDelete
 }
 
+// toDeleteWaitGroup waits for all toDelete goroutines
+var toDeleteWaitGroup sync.WaitGroup
+
+// deleteAccumulatorWaitGroup waits delete accumulator
+var deleteAccumulatorWaitGroup sync.WaitGroup
+
 // lockURLToDeleteStorage mutex for deletion process.
 var lockURLToDeleteStorage = sync.Mutex{}
+
+// accumulateRecordsToDeleteStopper stops accumulator.
+var accumulateRecordsToDeleteStopper = make(chan any)
 
 // Create creates ShortURL.
 func (repo *DatabaseRepository) Create(ctx context.Context, shortURL entities.ShortURL) (entities.ShortURL, error) {
@@ -161,31 +170,34 @@ func (repo *DatabaseRepository) DeleteRecords(ctx context.Context, userID uuid.U
 		UserID:   userID,
 		ItemsIDs: ids,
 	}
-	go func() { repo.ToDelete <- itemToDelete }()
+	toDeleteWaitGroup.Add(1)
+	go func() {
+		defer toDeleteWaitGroup.Done()
+		repo.ToDelete <- itemToDelete
+	}()
 	return nil
 }
 
 // AccumulateRecordsToDelete accumulates ShortURLs to delete in background.
-func (repo *DatabaseRepository) AccumulateRecordsToDelete() {
-	ticker := time.NewTicker(time.Millisecond * 500)
+func (repo *DatabaseRepository) AccumulateRecordsToDelete(globalCtx context.Context) {
+	ticker := time.NewTicker(time.Millisecond * 1500)
 	defer ticker.Stop()
 
 	localStorage := make(map[uuid.UUID][]string)
 
+	deleteAccumulatorWaitGroup.Add(1)
 	go func() {
-		for range ticker.C {
-			lockURLToDeleteStorage.Lock()
-			for userID, ids := range localStorage {
-				err := repo.DeleteRecordsForUser(context.Background(), userID, ids)
-				if err != nil {
-					repo.ToDelete <- &entities.ItemToDelete{
-						UserID:   userID,
-						ItemsIDs: ids,
-					}
-				}
-				delete(localStorage, userID)
+		defer deleteAccumulatorWaitGroup.Done()
+		for {
+			select {
+			case <-ticker.C:
+				repo.drainToDeleteStorage(globalCtx, localStorage)
+			case <-globalCtx.Done():
+			case <-accumulateRecordsToDeleteStopper:
+				repo.drainToDeleteStorage(globalCtx, localStorage)
+				log.Println("Finishing Accumulating coroutine")
+				return
 			}
-			lockURLToDeleteStorage.Unlock()
 		}
 	}()
 
@@ -199,6 +211,31 @@ func (repo *DatabaseRepository) AccumulateRecordsToDelete() {
 		}
 		lockURLToDeleteStorage.Unlock()
 	}
+}
+
+func (repo *DatabaseRepository) drainToDeleteStorage(globalCtx context.Context, localStorage map[uuid.UUID][]string) {
+	lockURLToDeleteStorage.Lock()
+	for userID, ids := range localStorage {
+		err := repo.DeleteRecordsForUser(globalCtx, userID, ids)
+		if err != nil {
+			log.Println("Error removing records")
+		}
+		delete(localStorage, userID)
+	}
+	lockURLToDeleteStorage.Unlock()
+}
+
+// CloseConnection closes database connection on request
+func (repo *DatabaseRepository) CloseConnection() error {
+	// waiting for all goroutines started in DeleteRecords
+	toDeleteWaitGroup.Wait()
+	close(repo.ToDelete)
+
+	// waiting for ticker goroutine is being stopped by cancelled global context or by next line
+	close(accumulateRecordsToDeleteStopper)
+	deleteAccumulatorWaitGroup.Wait()
+
+	return repo.Storage.Close()
 }
 
 // DeleteRecordsForUser deletes all ShortURLs for user.
@@ -215,4 +252,32 @@ func (repo *DatabaseRepository) DeleteRecordsForUser(ctx context.Context, userID
 		args...,
 	)
 	return err
+}
+
+// GetOverallURLsAmount gets amount of urls.
+func (repo *DatabaseRepository) GetOverallURLsAmount(ctx context.Context) (int, error) {
+	var count int
+	row := repo.Storage.QueryRowContext(
+		ctx,
+		"SELECT COUNT(DISTINCT original_url) as amount FROM short_urls",
+	)
+	err := row.Scan(&count)
+	if err != nil {
+		return count, err
+	}
+	return count, nil
+}
+
+// GetOverallUsersAmount gets amount of users.
+func (repo *DatabaseRepository) GetOverallUsersAmount(ctx context.Context) (int, error) {
+	var count int
+	row := repo.Storage.QueryRowContext(
+		ctx,
+		"SELECT COUNT(DISTINCT user_id) as amount FROM short_urls",
+	)
+	err := row.Scan(&count)
+	if err != nil {
+		return count, err
+	}
+	return count, nil
 }
