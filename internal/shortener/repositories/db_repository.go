@@ -18,15 +18,13 @@ import (
 
 // DatabaseRepository repository based on database.
 type DatabaseRepository struct {
-	Storage  *sql.DB
-	ToDelete chan *entities.ItemToDelete
+	Storage                    *sql.DB
+	ToDelete                   chan *entities.ItemToDelete
+	DeleteAccumulatorWaitGroup *sync.WaitGroup
 }
 
 // toDeleteWaitGroup waits for all toDelete goroutines
 var toDeleteWaitGroup sync.WaitGroup
-
-// deleteAccumulatorWaitGroup waits delete accumulator
-var deleteAccumulatorWaitGroup sync.WaitGroup
 
 // lockURLToDeleteStorage mutex for deletion process.
 var lockURLToDeleteStorage = sync.Mutex{}
@@ -185,9 +183,8 @@ func (repo *DatabaseRepository) AccumulateRecordsToDelete(globalCtx context.Cont
 
 	localStorage := make(map[uuid.UUID][]string)
 
-	deleteAccumulatorWaitGroup.Add(1)
 	go func() {
-		defer deleteAccumulatorWaitGroup.Done()
+		defer repo.DeleteAccumulatorWaitGroup.Done()
 		for {
 			select {
 			case <-ticker.C:
@@ -233,7 +230,9 @@ func (repo *DatabaseRepository) CloseConnection() error {
 
 	// waiting for ticker goroutine is being stopped by cancelled global context or by next line
 	close(accumulateRecordsToDeleteStopper)
-	deleteAccumulatorWaitGroup.Wait()
+
+	// wait for accumulator goroutine stopped
+	repo.DeleteAccumulatorWaitGroup.Wait()
 
 	return repo.Storage.Close()
 }

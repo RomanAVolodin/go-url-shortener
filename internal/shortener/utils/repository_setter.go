@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/RomanAVolodin/go-url-shortener/internal/shortener/config"
@@ -59,10 +60,14 @@ func SetRepository(globalCtx context.Context) repositories.IRepository {
 			log.Fatal(config.NoConnectionToDatabase)
 		}
 		log.Println("Postgres storage`s been  chosen")
+
+		var deleteAccumulatorWaitGroup sync.WaitGroup
 		repo := &repositories.DatabaseRepository{
-			Storage:  db,
-			ToDelete: make(chan *entities.ItemToDelete, 16),
+			Storage:                    db,
+			ToDelete:                   make(chan *entities.ItemToDelete, 16),
+			DeleteAccumulatorWaitGroup: &deleteAccumulatorWaitGroup,
 		}
+		deleteAccumulatorWaitGroup.Add(1)
 		go repo.AccumulateRecordsToDelete(globalCtx)
 		return repo
 	}
