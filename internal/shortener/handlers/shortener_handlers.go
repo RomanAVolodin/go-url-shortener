@@ -217,7 +217,7 @@ func (h *Shortener) GetServiceStats(
 ) {
 	_, network, err := net.ParseCIDR(config.Settings.TrustedSubnet)
 	userIP := net.ParseIP(r.Header.Get("X-Real-IP"))
-	if err == nil && !network.Contains(userIP) {
+	if err != nil || !network.Contains(userIP) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}

@@ -90,13 +90,13 @@ func main() {
 		if err := server.Shutdown(context.Background()); err != nil {
 			log.Printf("HTTP Server Shutdown error: %v", err)
 		}
+		log.Println("Server HTTP is stopped")
+		gRPCServer.GracefulStop()
+		log.Println("Server gRPC is stopped")
 
 		if err := handler.Repo.CloseConnection(); err != nil {
 			log.Printf("Servers Repos closing error: %v", err)
 		}
-
-		gRPCServer.GracefulStop()
-		log.Println("Server gRPC is stopped")
 
 		cancelGlobalContext()
 		close(idleConnectionsClosed)
