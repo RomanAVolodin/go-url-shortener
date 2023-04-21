@@ -13,6 +13,9 @@ import (
 // ShortURLIDFixture short url fixture.
 var ShortURLIDFixture = shortuuid.New()
 
+// ShortURLIDFixtureInactive short url fixture.
+var ShortURLIDFixtureInactive = shortuuid.New()
+
 // UserIDFixture user id fixture.
 var UserIDFixture = uuid.New()
 
@@ -28,8 +31,8 @@ var ShortURLFixture = entities.ShortURL{
 
 // ShortURLFixtureInactive inactive ShortURL fixture
 var ShortURLFixtureInactive = entities.ShortURL{
-	ID:            ShortURLIDFixture,
-	Short:         utils.GenerateResultURL(ShortURLIDFixture),
+	ID:            ShortURLIDFixtureInactive,
+	Short:         utils.GenerateResultURL(ShortURLIDFixtureInactive),
 	Original:      "https://ya.ru",
 	UserID:        UserIDFixture,
 	CorrelationID: "correlation_id",

@@ -71,3 +71,26 @@ func (repo *InMemoryRepository) DeleteRecords(ctx context.Context, userID uuid.U
 	lock.Unlock()
 	return nil
 }
+
+// GetOverallURLsAmount gets amount of urls.
+func (repo *InMemoryRepository) GetOverallURLsAmount(ctx context.Context) (int, error) {
+	result := make(map[string]bool, len(repo.Storage))
+	for _, item := range repo.Storage {
+		result[item.Original] = true
+	}
+	return len(result), nil
+}
+
+// GetOverallUsersAmount gets amount of users.
+func (repo *InMemoryRepository) GetOverallUsersAmount(ctx context.Context) (int, error) {
+	result := make(map[uuid.UUID]bool, len(repo.Storage))
+	for _, item := range repo.Storage {
+		result[item.UserID] = true
+	}
+	return len(result), nil
+}
+
+// CloseConnection closes storage connection on request
+func (repo *InMemoryRepository) CloseConnection() error {
+	return nil
+}
