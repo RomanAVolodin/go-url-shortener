@@ -6,6 +6,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -32,10 +33,7 @@ func AuthCookie(next http.Handler) http.Handler {
 		userID, err = GetUserIDFromCookie(r)
 
 		if err != nil || userID == uuid.Nil {
-			userID, err = uuid.NewUUID()
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-			}
+			userID = uuid.New()
 		}
 
 		cookie := &http.Cookie{
@@ -71,10 +69,15 @@ func GetUserIDFromCookie(r *http.Request) (uuid.UUID, error) {
 	if cookie == nil {
 		return uuid.Nil, err
 	}
-	cookieArray := strings.Split(cookie.Value, "|")
-	if len(cookieArray) == 2 {
-		decodedID, errDecode := hex.DecodeString(cookieArray[0])
-		userIDString, signString := decodedID, cookieArray[1]
+	return DecodeUserIDFromHashedString(cookie.Value)
+}
+
+// DecodeUserIDFromHashedString gets user id from hashed string.
+func DecodeUserIDFromHashedString(hashedString string) (uuid.UUID, error) {
+	arrayFromHashedString := strings.Split(hashedString, "|")
+	if len(arrayFromHashedString) == 2 {
+		decodedID, errDecode := hex.DecodeString(arrayFromHashedString[0])
+		userIDString, signString := decodedID, arrayFromHashedString[1]
 		userID, errParse := uuid.ParseBytes(userIDString)
 		newSign := MakeSignature(userID.String())
 
@@ -83,5 +86,5 @@ func GetUserIDFromCookie(r *http.Request) (uuid.UUID, error) {
 		}
 	}
 
-	return uuid.Nil, err
+	return uuid.Nil, errors.New("failed to parse hashed string")
 }
