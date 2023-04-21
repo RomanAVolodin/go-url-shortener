@@ -52,10 +52,7 @@ var buildDate = "N/A"
 var buildCommit = "N/A"
 
 func main() {
-	ctx, cancelGlobalContext := context.WithCancel(context.Background())
-	defer cancelGlobalContext()
-
-	repo := utils.SetRepository(ctx)
+	repo := utils.SetRepository()
 
 	handler := handlers.NewShortener(repo)
 
@@ -98,7 +95,6 @@ func main() {
 			log.Printf("Servers Repos closing error: %v", err)
 		}
 
-		cancelGlobalContext()
 		close(idleConnectionsClosed)
 	}()
 

@@ -177,7 +177,7 @@ func (repo *DatabaseRepository) DeleteRecords(ctx context.Context, userID uuid.U
 }
 
 // AccumulateRecordsToDelete accumulates ShortURLs to delete in background.
-func (repo *DatabaseRepository) AccumulateRecordsToDelete(globalCtx context.Context) {
+func (repo *DatabaseRepository) AccumulateRecordsToDelete() {
 	ticker := time.NewTicker(time.Millisecond * 1500)
 	defer ticker.Stop()
 
@@ -188,10 +188,9 @@ func (repo *DatabaseRepository) AccumulateRecordsToDelete(globalCtx context.Cont
 		for {
 			select {
 			case <-ticker.C:
-				repo.drainToDeleteStorage(globalCtx, localStorage)
-			case <-globalCtx.Done():
+				repo.drainToDeleteStorage(localStorage)
 			case <-accumulateRecordsToDeleteStopper:
-				repo.drainToDeleteStorage(globalCtx, localStorage)
+				repo.drainToDeleteStorage(localStorage)
 				log.Println("Finishing Accumulating coroutine")
 				return
 			}
@@ -210,10 +209,10 @@ func (repo *DatabaseRepository) AccumulateRecordsToDelete(globalCtx context.Cont
 	}
 }
 
-func (repo *DatabaseRepository) drainToDeleteStorage(globalCtx context.Context, localStorage map[uuid.UUID][]string) {
+func (repo *DatabaseRepository) drainToDeleteStorage(localStorage map[uuid.UUID][]string) {
 	lockURLToDeleteStorage.Lock()
 	for userID, ids := range localStorage {
-		err := repo.DeleteRecordsForUser(globalCtx, userID, ids)
+		err := repo.DeleteRecordsForUser(context.Background(), userID, ids)
 		if err != nil {
 			log.Println("Error removing records")
 		}
@@ -258,7 +257,7 @@ func (repo *DatabaseRepository) GetOverallURLsAmount(ctx context.Context) (int, 
 	var count int
 	row := repo.Storage.QueryRowContext(
 		ctx,
-		"SELECT COUNT(DISTINCT original_url) as amount FROM short_urls",
+		"SELECT COUNT(original_url) as amount FROM short_urls",
 	)
 	err := row.Scan(&count)
 	if err != nil {

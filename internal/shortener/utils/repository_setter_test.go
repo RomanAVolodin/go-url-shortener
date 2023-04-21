@@ -61,7 +61,7 @@ func TestSetRepositories(t *testing.T) {
 			} else {
 				config.Settings.FileStoragePath = tt.filepath
 			}
-			got := SetRepository(context.Background())
+			got := SetRepository()
 
 			assert.Equal(t, reflect.TypeOf(got).String(), tt.want)
 			got.DeleteRecords(context.Background(), uuid.New(), []string{uuid.New().String(), uuid.New().String()})

@@ -16,7 +16,7 @@ import (
 )
 
 // SetRepository is the main method to set type of database to use in application.
-func SetRepository(globalCtx context.Context) repositories.IRepository {
+func SetRepository() repositories.IRepository {
 	if config.Settings.DatabaseDSN != "" {
 		var db *sql.DB
 		var err error
@@ -68,7 +68,7 @@ func SetRepository(globalCtx context.Context) repositories.IRepository {
 			DeleteAccumulatorWaitGroup: &deleteAccumulatorWaitGroup,
 		}
 		deleteAccumulatorWaitGroup.Add(1)
-		go repo.AccumulateRecordsToDelete(globalCtx)
+		go repo.AccumulateRecordsToDelete()
 		return repo
 	}
 	if config.Settings.FileStoragePath != "" {
